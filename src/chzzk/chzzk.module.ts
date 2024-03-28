@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ChzzkService } from './chzzk.service';
-import { ChzzkController } from './chzzk.controller';
+import { ChzzkService } from './services/chzzk.service';
+import { ChzzkController } from './controllers/chzzk.controller';
 
 @Module({
   controllers: [ChzzkController],

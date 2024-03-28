@@ -6,11 +6,7 @@ export class ChzzkService {
   chzzk = new Chzzk();
 
   async getChannelsByKeyword(keyword: string) {
-    console.log('keyword =>', keyword);
     const channels = await this.chzzk.channel.findByKeyword(keyword);
-    for (const channel of channels['data']) {
-      console.log(channel);
-    }
 
     return channels['data'];
   }
