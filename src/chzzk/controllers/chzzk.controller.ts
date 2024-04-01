@@ -1,6 +1,8 @@
 import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ChzzkService } from '../services/chzzk.service';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('chzzk')
 @Controller('chzzk')
 export class ChzzkController {
   constructor(private chzzkService: ChzzkService) {}
