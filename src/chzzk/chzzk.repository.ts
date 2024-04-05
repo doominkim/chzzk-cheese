@@ -2,40 +2,35 @@ import { Injectable } from '@nestjs/common';
 import { ChzzkModule as Chzzk } from 'chzzk-z';
 
 @Injectable()
-export class ChannelService {
-  chzzk = new Chzzk();
-
+export class ChzzkRepository extends Chzzk {
   async getChannelsByKeyword(keyword: string) {
-    const channels = await this.chzzk.channel.findByKeyword(keyword);
-    console.log(channels);
+    const channels = await this.channel.findByKeyword(keyword);
     return channels['data'];
   }
 
   async getChannelById(channelId: string) {
-    const channel = await this.chzzk.channel.findById(channelId);
-
-    console.log(channel);
+    const channel = await this.channel.findById(channelId);
     return channel;
   }
 
   async getChannelStatus(channelId: string) {
-    return this.chzzk.live.findStatusByChannelId(channelId);
+    return this.live.findStatusByChannelId(channelId);
   }
 
   async getChannelDetails(channelId: string) {
-    return this.chzzk.live.findDetailByChannelId(channelId);
+    return this.live.findDetailByChannelId(channelId);
   }
 
   async joinChannel(channelId: string) {
     try {
-      await this.chzzk.chat.join(channelId);
-      await this.chzzk.chat.connect();
+      await this.chat.join(channelId);
+      await this.chat.connect();
     } catch (error) {
       throw error;
     }
   }
 
   async leaveChannel(channelId: string) {
-    return await this.chzzk.chat.disconnect();
+    return await this.chat.disconnect();
   }
 }
