@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { BatchModule } from './batch/batch.module';
-import { ChzzkModule } from './chzzk/chzzk.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
 import envFilePath from 'envs/env';
+import { ChannelModule } from './channel/channel.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 const envValidationSchema = Joi.object({
   PORT: Joi.number().required(),
@@ -19,32 +20,38 @@ const envValidationSchema = Joi.object({
   // JWT_SECRET: Joi.string().required(),
 });
 
+const conifgModule = [
+  ServeStaticModule.forRoot({
+    rootPath: join(__dirname, '..', 'public'),
+  }),
+  ConfigModule.forRoot({
+    isGlobal: true,
+    envFilePath,
+    validationSchema: envValidationSchema,
+  }),
+  TypeOrmModule.forRoot({
+    type: 'postgres',
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT),
+    username: process.env.DB_USERNAME,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    schema: process.env.DB_SCHEMA_NAME,
+    synchronize: true,
+    logging: process.env.DB_LOGGING === 'true' ? true : false,
+    autoLoadEntities: true,
+    // logger: new CustomDbLogger(),
+    ssl: process.env.DB_SSL === 'true' ? true : false,
+    extra: {
+      ssl: {
+        rejectUnauthorized: false,
+      },
+    },
+  }),
+  ScheduleModule.forRoot(),
+];
+const serviceModule = [BatchModule, ChannelModule];
 @Module({
-  imports: [
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'public'),
-    }),
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath,
-      validationSchema: envValidationSchema,
-    }),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: parseInt(process.env.DB_PORT),
-      username: process.env.DB_USERNAME,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      schema: process.env.DB_SCHEMA_NAME,
-      synchronize: true,
-      logging: process.env.DB_LOGGING === 'true' ? true : false,
-      autoLoadEntities: true,
-      // logger: new CustomDbLogger(),
-      ssl: process.env.DB_SSL === 'true' ? true : false,
-    }),
-    BatchModule,
-    ChzzkModule,
-  ],
+  imports: [...conifgModule, ...serviceModule],
 })
 export class AppModule {}

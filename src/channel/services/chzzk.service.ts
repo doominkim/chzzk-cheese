@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ChzzkModule as Chzzk } from 'chzzk-z';
 
 @Injectable()
-export class ChzzkService {
+export class ChannelService {
   chzzk = new Chzzk();
 
   async getChannelsByKeyword(keyword: string) {
