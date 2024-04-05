@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { ChzzkModule as Chzzk } from 'chzzk-z';
+import { ChannelRepository } from '../repositories/channel.repository';
 
 @Injectable()
-export class ChannelService {}
+export class ChannelService {
+  constructor(private channelRepository: ChannelRepository) {}
+}

@@ -5,6 +5,7 @@ import { ChzzkModule as Chzzk } from 'chzzk-z';
 export class ChzzkRepository extends Chzzk {
   async getChannelsByKeyword(keyword: string) {
     const channels = await this.channel.findByKeyword(keyword);
+    console.log(channels);
     return channels['data'];
   }
 

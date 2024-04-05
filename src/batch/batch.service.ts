@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { ExportChzzkService } from 'src/chzzk/export-chzzk.service';
 
 @Injectable()
 export class BatchService {
@@ -7,10 +8,10 @@ export class BatchService {
 
   constructor() {}
 
-  //   @Cron('*/1 * * * * *', {
-  //     name: 'job1',
-  //   })
-  //   handleCron() {
-  //     this.logger.debug('Called when the current second is 45');
-  //   }
+  @Cron('*/10 * * * * *', {
+    name: 'updateChannels',
+  })
+  updateChannels() {
+    this.logger.debug('Called when the current second is 45');
+  }
 }
