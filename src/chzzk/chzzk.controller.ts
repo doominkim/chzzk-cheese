@@ -7,28 +7,28 @@ import { ApiTags } from '@nestjs/swagger';
 export class ChzzkController {
   constructor(private exportChzzkService: ExportChzzkService) {}
 
-  @Get('channels')
+  @Get('channel')
   async getChannelsByKeyword(@Query('keyword') keyword: string) {
     console.log('keyword =>', keyword);
 
     return await this.exportChzzkService.getChannelsByKeyword(keyword);
   }
 
-  @Get('channels/:channelId')
+  @Get('channel/:channelId')
   async getChannelById(@Param('channelId') channelId: string) {
     console.log('channelId =>', channelId);
 
     return await this.exportChzzkService.getChannelById(channelId);
   }
 
-  @Get('channels/:channelId/status')
+  @Get('channel/:channelId/status')
   async getChannelStatus(@Param('channelId') channelId: string) {
     console.log('channelId =>', channelId);
 
     return await this.exportChzzkService.getChannelStatus(channelId);
   }
 
-  @Get('channels/:channelId/detail')
+  @Get('channel/:channelId/detail')
   async getChannelDetails(@Param('channelId') channelId: string) {
     console.log('channelId =>', channelId);
 

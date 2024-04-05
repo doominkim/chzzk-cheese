@@ -1,36 +1,48 @@
-import { Repository } from 'typeorm';
+import { Repository, UpdateResult } from 'typeorm';
 import { Channel } from '../entities/channel.entity';
 import { Injectable } from '@nestjs/common';
-import { ChannelDto } from '../dtos/channel.dto';
 import { GenerateChannelDto } from '../dtos/generate-channel.dto';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
-export class ChannelRepository extends Repository<Channel> {
-  async findChannels() {
-    return await this.createQueryBuilder('channel').getMany();
+export class ChannelRepository {
+  constructor(
+    @InjectRepository(Channel)
+    private repository: Repository<Channel>,
+  ) {}
+
+  async findChannels(): Promise<Channel[]> {
+    return await this.repository.createQueryBuilder('channel').getMany();
   }
 
-  async findChannelById(id: number) {
-    return await this.createQueryBuilder('channel')
+  async findChannelById(id: number): Promise<Channel> {
+    return await this.repository
+      .createQueryBuilder('channel')
       .where('channel.id = :id', { id })
       .getOne();
   }
 
-  async findChannelByChannelId(channelId: string) {
-    return await this.createQueryBuilder('channel')
+  async findChannelByChannelId(channelId: string): Promise<Channel> {
+    return await this.repository
+      .createQueryBuilder('channel')
       .where('channel.channelId = :channelId', { channelId })
       .getOne();
   }
 
-  async generateChannel(generateChannelDto: GenerateChannelDto) {
-    const instance = this.create({
+  async generateChannel(
+    generateChannelDto: GenerateChannelDto,
+  ): Promise<Channel> {
+    const instance = this.repository.create({
       ...generateChannelDto,
     });
 
-    return await this.save(instance);
+    return await this.repository.save(instance);
   }
 
-  async modifyChannel(id: number, modifyChannelDto: GenerateChannelDto) {
-    return await this.update(id, modifyChannelDto);
+  async modifyChannel(
+    id: number,
+    modifyChannelDto: GenerateChannelDto,
+  ): Promise<UpdateResult> {
+    return await this.repository.update(id, modifyChannelDto);
   }
 }

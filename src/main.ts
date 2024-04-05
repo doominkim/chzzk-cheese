@@ -16,7 +16,7 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       // Disable error messages in production
-      disableErrorMessages: process.env.NODE_ENV === 'dev' ? true : false,
+      disableErrorMessages: process.env.NODE_ENV === 'dev' ? false : true,
     }),
   );
 
