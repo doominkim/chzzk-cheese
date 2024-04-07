@@ -1,8 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { plainToClass, plainToInstance } from 'class-transformer';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { ChannelService } from 'src/channel/services/channel.service';
 import { ChzzkService } from 'src/chzzk/chzzk.service';
+import { ChzzkChannel } from 'src/chzzk/chzzk.type';
 
 @Injectable()
 export class BatchService {
@@ -13,7 +15,7 @@ export class BatchService {
     private channelService: ChannelService,
   ) {}
 
-  @Cron('*/10 * * * * *', {
+  @Cron('10 * * * * *', {
     name: 'trackingChannels',
   })
   async trackingChannels() {
@@ -34,12 +36,14 @@ export class BatchService {
 
     const chzzkChannel = await this.chzzkService.getChannelById(channelId);
 
-    console.log(chzzkChannel);
+    const { openLive } = chzzkChannel;
 
-    const chzzkChannelDetail = await this.chzzkService.getChannelLiveDetail(
-      channelId,
-    );
+    if (openLive) {
+      const chzzkChannelDetail = await this.chzzkService.getChannelLiveDetail(
+        channelId,
+      );
 
-    this.logger.debug(chzzkChannelDetail);
+      this.logger.debug(chzzkChannelDetail);
+    }
   }
 }

@@ -1,5 +1,5 @@
-import { Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiBody, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Post, Query } from '@nestjs/common';
+import { ApiProperty, ApiTags } from '@nestjs/swagger';
 import { ChannelService } from '../services/channel.service';
 import { GenerateChannelDto } from '../dtos/generate-channel.dto';
 

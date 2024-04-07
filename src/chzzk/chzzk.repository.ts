@@ -1,17 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { ChzzkModule as Chzzk } from 'chzzk-z';
+import { ChzzkChannelDto } from './dtos/chzzk-channel.dto';
+import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class ChzzkRepository extends Chzzk {
   async getChannelsByKeyword(keyword: string) {
     const channels = await this.channel.findByKeyword(keyword);
-    console.log(channels);
     return channels['data'];
   }
 
-  async getChannelById(channelId: string) {
+  async getChannelById(channelId: string): Promise<ChzzkChannelDto> {
     const channel = await this.channel.findById(channelId);
-    return channel;
+
+    return plainToInstance(ChzzkChannelDto, channel);
   }
 
   async getChannelLiveStatus(channelId: string) {
