@@ -1,10 +1,10 @@
 import { IsString } from 'class-validator';
-import { CoreHardEntity } from 'src/common/entities/core-hard.entity';
+import { CoreSoftEntity } from 'src/common/entities/core-soft.entity';
 import { Column, Entity, Unique } from 'typeorm';
 
 @Entity({ name: 'channelLiveCategory', schema: process.env.DB_SCHEMA_NAME })
 @Unique(['categoryType', 'liveCategory'])
-export class ChannelLiveCategory extends CoreHardEntity {
+export class ChannelLiveCategory extends CoreSoftEntity {
   @Column({ type: 'varchar', length: 100, nullable: false })
   @IsString()
   categoryType: string;

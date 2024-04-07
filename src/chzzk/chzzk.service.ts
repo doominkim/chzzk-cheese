@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ChzzkRepository } from './chzzk.repository';
 
 @Injectable()
-export class ExportChzzkService {
+export class ChzzkService {
   constructor(private chzzkRepository: ChzzkRepository) {}
 
   async getChannelsByKeyword(keyword: string) {
@@ -11,11 +11,11 @@ export class ExportChzzkService {
   async getChannelById(channelId: string) {
     return this.chzzkRepository.getChannelById(channelId);
   }
-  async getChannelStatus(channelId: string) {
-    return this.chzzkRepository.getChannelStatus(channelId);
+  async getChannelLiveStatus(channelId: string) {
+    return this.chzzkRepository.getChannelLiveStatus(channelId);
   }
-  async getChannelDetails(channelId: string) {
-    return this.chzzkRepository.getChannelDetails(channelId);
+  async getChannelLiveDetail(channelId: string) {
+    return this.chzzkRepository.getChannelLiveDetail(channelId);
   }
   async joinChannel(channelId: string) {
     return this.chzzkRepository.joinChannel(channelId);

@@ -1,10 +1,10 @@
 import { IsBoolean, IsNumber, IsString } from 'class-validator';
-import { CoreHardEntity } from 'src/common/entities/core-hard.entity';
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { Channel } from './channel.entity';
+import { CoreSoftEntity } from 'src/common/entities/core-soft.entity';
 
 @Entity({ name: 'channelLive', schema: process.env.DB_SCHEMA_NAME })
-export class ChannelLive extends CoreHardEntity {
+export class ChannelLive extends CoreSoftEntity {
   @Column({ type: 'int4', nullable: false })
   @IsNumber()
   liveId: number;

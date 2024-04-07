@@ -23,5 +23,6 @@ import { ChannelRepository } from './repositories/channel.repository';
   ],
   controllers: [ChannelController],
   providers: [ChannelService, ChannelRepository],
+  exports: [ChannelService],
 })
 export class ChannelModule {}

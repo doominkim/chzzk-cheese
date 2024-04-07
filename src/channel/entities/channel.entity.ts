@@ -1,12 +1,12 @@
 import { IsBoolean, IsNumber, IsString } from 'class-validator';
-import { CoreHardEntity } from 'src/common/entities/core-hard.entity';
 import { Column, Entity, JoinColumn, OneToMany } from 'typeorm';
 import { ChannelLive } from './channel-live.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+import { CoreSoftEntity } from 'src/common/entities/core-soft.entity';
 
 @Entity({ name: 'channel', schema: process.env.DB_SCHEMA_NAME })
-export class Channel extends CoreHardEntity {
+export class Channel extends CoreSoftEntity {
   @ApiProperty({
     required: true,
     type: String,

@@ -14,11 +14,11 @@ export class ChzzkRepository extends Chzzk {
     return channel;
   }
 
-  async getChannelStatus(channelId: string) {
+  async getChannelLiveStatus(channelId: string) {
     return this.live.findStatusByChannelId(channelId);
   }
 
-  async getChannelDetails(channelId: string) {
+  async getChannelLiveDetail(channelId: string) {
     return this.live.findDetailByChannelId(channelId);
   }
 
