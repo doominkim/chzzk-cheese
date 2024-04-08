@@ -7,4 +7,5 @@ export class GenerateChannelLiveDto extends PickType(ChannelLiveDto, [
   'channel',
   'status',
   'chatChannelId',
+  'liveLog',
 ]) {}

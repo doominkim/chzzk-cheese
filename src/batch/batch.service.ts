@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { plainToInstance } from 'class-transformer';
 import { ChannelLiveDto } from 'src/channel/dtos/channel-live.dto';
+import { GenerateChannelLiveLogDto } from 'src/channel/dtos/generate-channel-live-log.dto';
 import { GenerateChannelLiveDto } from 'src/channel/dtos/generate-channel-live.dto';
 import { ModifyChannelDto } from 'src/channel/dtos/modify-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
@@ -11,7 +11,6 @@ import { ChannelLiveService } from 'src/channel/services/channel-live.service';
 import { ChannelService } from 'src/channel/services/channel.service';
 import { ChzzkService } from 'src/chzzk/chzzk.service';
 import { ChzzkChannelDto } from 'src/chzzk/dtos/chzzk-channel.dto';
-import { compareObjects } from 'src/common/helpers/common-formmating.helper';
 @Injectable()
 export class BatchService {
   private readonly logger = new Logger(BatchService.name);
@@ -75,10 +74,34 @@ export class BatchService {
             chzzkChannelDetail.chatChannelId;
           generateChannelLiveDto.liveId = chzzkChannelDetail.liveId;
           generateChannelLiveDto.liveTitle = chzzkChannelDetail.liveTitle;
-          // generateChannelLiveDto.status = chzzkChannelDetail.status;
+          generateChannelLiveDto.status =
+            chzzkChannelDetail.status === 'OPEN' ? true : false;
+
+          const generateChannelLiveLogDto = new GenerateChannelLiveLogDto();
+          generateChannelLiveLogDto.accumulateCount =
+            chzzkChannelDetail.accumulateCount;
+          generateChannelLiveLogDto.concurrentUserCount =
+            chzzkChannelDetail.concurrentUserCount;
+          generateChannelLiveLogDto.minFollowerMinute =
+            chzzkChannelDetail.minFollowerMinute;
+          generateChannelLiveLogDto.liveTitle = chzzkChannelDetail.liveTitle;
 
           await this.channelLiveService.generateChannelLive(
             generateChannelLiveDto,
+          );
+        } else {
+          const generateChannelLiveLogDto = new GenerateChannelLiveLogDto();
+          generateChannelLiveLogDto.accumulateCount =
+            chzzkChannelDetail.accumulateCount;
+          generateChannelLiveLogDto.concurrentUserCount =
+            chzzkChannelDetail.concurrentUserCount;
+          generateChannelLiveLogDto.minFollowerMinute =
+            chzzkChannelDetail.minFollowerMinute;
+          generateChannelLiveLogDto.liveTitle = chzzkChannelDetail.liveTitle;
+          generateChannelLiveLogDto.channelLive = channelLive;
+
+          await this.channelLiveLogService.generateChannelLiveLog(
+            generateChannelLiveLogDto,
           );
         }
 
