@@ -1,12 +1,14 @@
 import { IsBoolean, IsNumber, IsString } from 'class-validator';
-import { Column, Entity, JoinColumn, OneToMany } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToMany, Unique } from 'typeorm';
 import { ChannelLive } from './channel-live.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 import { CoreSoftEntity } from 'src/common/entities/core-soft.entity';
 
 @Entity({ name: 'channel', schema: process.env.DB_SCHEMA_NAME })
+@Unique(['channelId'])
 export class Channel extends CoreSoftEntity {
+  @Expose()
   @ApiProperty({
     required: true,
     type: String,
@@ -27,7 +29,7 @@ export class Channel extends CoreSoftEntity {
     required: true,
     type: String,
   })
-  @Column({ type: 'varchar', length: 2048, nullable: false })
+  @Column({ type: 'varchar', length: 2048, nullable: true })
   @IsString()
   channelImageUrl: string;
 

@@ -4,6 +4,7 @@ import { Channel } from '../entities/channel.entity';
 export class GenerateChannelDto extends PickType(Channel, [
   'channelId',
   'channelImageUrl',
+  'channelDescription',
   'channelName',
   'follower',
   'openLive',

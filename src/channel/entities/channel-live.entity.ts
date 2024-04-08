@@ -1,5 +1,5 @@
 import { IsBoolean, IsNumber, IsString } from 'class-validator';
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, ManyToOne } from 'typeorm';
 import { Channel } from './channel.entity';
 import { CoreSoftEntity } from 'src/common/entities/core-soft.entity';
 

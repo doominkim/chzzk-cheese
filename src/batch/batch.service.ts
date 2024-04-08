@@ -1,11 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { plainToClass, plainToInstance } from 'class-transformer';
+import { plainToInstance } from 'class-transformer';
+import { ModifyChannelDto } from 'src/channel/dtos/modify-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { ChannelService } from 'src/channel/services/channel.service';
 import { ChzzkService } from 'src/chzzk/chzzk.service';
-import { ChzzkChannel } from 'src/chzzk/chzzk.type';
-
+import { ChzzkChannelDto } from 'src/chzzk/dtos/chzzk-channel.dto';
+import { compareObjects } from 'src/common/helpers/common-formmating.helper';
 @Injectable()
 export class BatchService {
   private readonly logger = new Logger(BatchService.name);
@@ -15,7 +16,7 @@ export class BatchService {
     private channelService: ChannelService,
   ) {}
 
-  @Cron('10 * * * * *', {
+  @Cron('*/10 * * * * *', {
     name: 'trackingChannels',
   })
   async trackingChannels() {
@@ -28,22 +29,42 @@ export class BatchService {
 
       this.logger.log(`[${this.trackingChannels.name}]`);
     } catch (e) {
-      this.logger.error('e');
+      this.logger.error(e);
     }
   }
   async trackingChannel(channel: Channel) {
-    const { channelId } = channel;
+    const { id, channelId } = channel;
 
     const chzzkChannel = await this.chzzkService.getChannelById(channelId);
 
-    const { openLive } = chzzkChannel;
+    const isUpdate = this.isUpdateChannel(channel, chzzkChannel);
 
-    if (openLive) {
+    if (isUpdate) {
+      const modifyChannelDto = new ModifyChannelDto();
+      modifyChannelDto.channelName = chzzkChannel.channelName;
+      modifyChannelDto.channelImageUrl = chzzkChannel.channelImageUrl;
+      modifyChannelDto.channelDescription = chzzkChannel.channelDescription;
+      modifyChannelDto.follower = chzzkChannel.followerCount;
+      modifyChannelDto.openLive = chzzkChannel.openLive;
+      await this.channelService.modifyChannel(id, modifyChannelDto);
+    }
+
+    if (chzzkChannel.openLive) {
       const chzzkChannelDetail = await this.chzzkService.getChannelLiveDetail(
         channelId,
       );
-
-      this.logger.debug(chzzkChannelDetail);
     }
+  }
+  isUpdateChannel(channel: Channel, chzzkChannel: ChzzkChannelDto): boolean {
+    if (
+      channel.channelName !== chzzkChannel.channelName ||
+      channel.channelDescription !== chzzkChannel.channelDescription ||
+      channel.channelImageUrl !== chzzkChannel.channelImageUrl ||
+      channel.openLive !== chzzkChannel.openLive ||
+      channel.follower !== chzzkChannel.followerCount
+    ) {
+      return true;
+    }
+    return false;
   }
 }

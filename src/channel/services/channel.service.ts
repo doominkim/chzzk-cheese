@@ -2,8 +2,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ChannelRepository } from '../repositories/channel.repository';
 import { GenerateChannelDto } from '../dtos/generate-channel.dto';
 import { ModifyChannelDto } from '../dtos/modify-channel.dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Channel } from '../entities/channel.entity';
 
 @Injectable()
 export class ChannelService {

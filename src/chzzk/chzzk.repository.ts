@@ -3,6 +3,7 @@ import { ChzzkModule as Chzzk } from 'chzzk-z';
 import { ChzzkChannelDto } from './dtos/chzzk-channel.dto';
 import { plainToInstance } from 'class-transformer';
 import { ChzzkLiveStatusDto } from './dtos/chzzk-channel-live-status.dto';
+import { ChzzkChannelDetailDto } from './dtos/chzzk-channel-live-detail.dto';
 
 @Injectable()
 export class ChzzkRepository extends Chzzk {
@@ -23,8 +24,11 @@ export class ChzzkRepository extends Chzzk {
     return plainToInstance(ChzzkLiveStatusDto, liveStatus);
   }
 
-  async getChannelLiveDetail(channelId: string) {
-    return this.live.findDetailByChannelId(channelId);
+  async getChannelLiveDetail(
+    channelId: string,
+  ): Promise<ChzzkChannelDetailDto> {
+    const liveDetail = await this.live.findDetailByChannelId(channelId);
+    return plainToInstance(ChzzkChannelDetailDto, liveDetail);
   }
 
   async joinChannel(channelId: string) {
