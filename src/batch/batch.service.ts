@@ -1,8 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { plainToInstance } from 'class-transformer';
+import { ChannelLiveDto } from 'src/channel/dtos/channel-live.dto';
+import { GenerateChannelLiveDto } from 'src/channel/dtos/generate-channel-live.dto';
 import { ModifyChannelDto } from 'src/channel/dtos/modify-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
+import { ChannelLiveCategoryService } from 'src/channel/services/channel-live-category.service';
+import { ChannelLiveLogService } from 'src/channel/services/channel-live-log.service';
+import { ChannelLiveService } from 'src/channel/services/channel-live.service';
 import { ChannelService } from 'src/channel/services/channel.service';
 import { ChzzkService } from 'src/chzzk/chzzk.service';
 import { ChzzkChannelDto } from 'src/chzzk/dtos/chzzk-channel.dto';
@@ -14,6 +19,9 @@ export class BatchService {
   constructor(
     private chzzkService: ChzzkService,
     private channelService: ChannelService,
+    private channelLiveService: ChannelLiveService,
+    private channelLiveLogService: ChannelLiveLogService,
+    private channelLiveCategoryService: ChannelLiveCategoryService,
   ) {}
 
   @Cron('*/10 * * * * *', {
@@ -53,6 +61,29 @@ export class BatchService {
       const chzzkChannelDetail = await this.chzzkService.getChannelLiveDetail(
         channelId,
       );
+
+      if (chzzkChannelDetail.liveId) {
+        const channelLive =
+          await this.channelLiveService.findChannelLiveByLiveId(
+            chzzkChannelDetail.liveId,
+          );
+
+        if (!channelLive) {
+          const generateChannelLiveDto = new GenerateChannelLiveDto();
+          generateChannelLiveDto.channel = channel;
+          generateChannelLiveDto.chatChannelId =
+            chzzkChannelDetail.chatChannelId;
+          generateChannelLiveDto.liveId = chzzkChannelDetail.liveId;
+          generateChannelLiveDto.liveTitle = chzzkChannelDetail.liveTitle;
+          // generateChannelLiveDto.status = chzzkChannelDetail.status;
+
+          await this.channelLiveService.generateChannelLive(
+            generateChannelLiveDto,
+          );
+        }
+
+        const channelLiveDto = new ChannelLiveDto();
+      }
     }
   }
   isUpdateChannel(channel: Channel, chzzkChannel: ChzzkChannelDto): boolean {

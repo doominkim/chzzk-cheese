@@ -1,6 +1,6 @@
-import { IsBoolean, IsNumber, IsString } from 'class-validator';
+import { IsNumber, IsString } from 'class-validator';
 import { CoreHardEntity } from 'src/common/entities/core-hard.entity';
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, ManyToOne } from 'typeorm';
 import { ChannelLive } from './channel-live.entity';
 
 @Entity({ name: 'channelLiveLog', schema: process.env.DB_SCHEMA_NAME })
