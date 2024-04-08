@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ChannelLive } from '../entities/channel-live.entity';
 import { GenerateChannelLiveDto } from '../dtos/generate-channel-live.dto';
+import { ChannelLiveDto } from '../dtos/channel-live.dto';
 
 @Injectable()
 export class ChannelLiveRepository {
@@ -11,7 +12,7 @@ export class ChannelLiveRepository {
     private repository: Repository<ChannelLive>,
   ) {}
 
-  async findChannelLiveByLiveId(liveId: number): Promise<ChannelLive> {
+  async findChannelLiveByLiveId(liveId: number): Promise<ChannelLiveDto> {
     return await this.repository
       .createQueryBuilder('cl')
       .where('cl.liveId = :liveId', { liveId })
