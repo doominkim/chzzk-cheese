@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ChzzkModule as Chzzk } from 'chzzk-z';
 import { ChzzkChannelDto } from './dtos/chzzk-channel.dto';
 import { plainToInstance } from 'class-transformer';
+import { ChzzkLiveStatusDto } from './dtos/chzzk-channel-live-status.dto';
 
 @Injectable()
 export class ChzzkRepository extends Chzzk {
@@ -16,8 +17,10 @@ export class ChzzkRepository extends Chzzk {
     return plainToInstance(ChzzkChannelDto, channel);
   }
 
-  async getChannelLiveStatus(channelId: string) {
-    return this.live.findStatusByChannelId(channelId);
+  async getChannelLiveStatus(channelId: string): Promise<ChzzkLiveStatusDto> {
+    const liveStatus = await this.live.findStatusByChannelId(channelId);
+
+    return plainToInstance(ChzzkLiveStatusDto, liveStatus);
   }
 
   async getChannelLiveDetail(channelId: string) {
