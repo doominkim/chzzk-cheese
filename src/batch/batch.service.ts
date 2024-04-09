@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { ChannelLiveDto } from 'src/channel/dtos/channel-live.dto';
+import { GenerateChannelLiveCategoryDto } from 'src/channel/dtos/generate-channel-live-category.dto';
 import { GenerateChannelLiveLogDto } from 'src/channel/dtos/generate-channel-live-log.dto';
 import { GenerateChannelLiveDto } from 'src/channel/dtos/generate-channel-live.dto';
 import { ModifyChannelDto } from 'src/channel/dtos/modify-channel.dto';
@@ -23,7 +24,7 @@ export class BatchService {
     private channelLiveCategoryService: ChannelLiveCategoryService,
   ) {}
 
-  @Cron('*/10 * * * * *', {
+  @Cron('0 */1 * * * *', {
     name: 'trackingChannels',
   })
   async trackingChannels() {
@@ -67,6 +68,30 @@ export class BatchService {
             chzzkChannelDetail.liveId,
           );
 
+        let channelLiveCategory;
+        channelLiveCategory =
+          await this.channelLiveCategoryService.findChannelLiveCategoryByLiveId(
+            chzzkChannelDetail.categoryType,
+            chzzkChannelDetail.liveCategory,
+          );
+
+        if (!channelLiveCategory) {
+          const generateChannelLiveCategoryDto =
+            new GenerateChannelLiveCategoryDto();
+
+          generateChannelLiveCategoryDto.categoryType =
+            chzzkChannelDetail.categoryType;
+          generateChannelLiveCategoryDto.liveCategory =
+            chzzkChannelDetail.liveCategory;
+          generateChannelLiveCategoryDto.liveCategoryValue =
+            chzzkChannelDetail.liveCategoryValue;
+
+          channelLiveCategory =
+            await this.channelLiveCategoryService.generateChannelLiveCategory(
+              generateChannelLiveCategoryDto,
+            );
+        }
+
         if (!channelLive) {
           const generateChannelLiveDto = new GenerateChannelLiveDto();
           generateChannelLiveDto.channel = channel;
@@ -76,6 +101,7 @@ export class BatchService {
           generateChannelLiveDto.liveTitle = chzzkChannelDetail.liveTitle;
           generateChannelLiveDto.status =
             chzzkChannelDetail.status === 'OPEN' ? true : false;
+          generateChannelLiveDto.liveCategory = channelLiveCategory;
 
           const generateChannelLiveLogDto = new GenerateChannelLiveLogDto();
           generateChannelLiveLogDto.accumulateCount =
@@ -104,8 +130,6 @@ export class BatchService {
             generateChannelLiveLogDto,
           );
         }
-
-        const channelLiveDto = new ChannelLiveDto();
       }
     }
   }

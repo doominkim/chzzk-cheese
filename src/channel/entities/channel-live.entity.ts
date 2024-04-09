@@ -1,8 +1,16 @@
 import { IsBoolean, IsNumber, IsString } from 'class-validator';
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToMany,
+  ManyToOne,
+  OneToMany,
+} from 'typeorm';
 import { Channel } from './channel.entity';
 import { CoreSoftEntity } from 'src/common/entities/core-soft.entity';
 import { ChannelLiveLog } from './channel-live-log.entity';
+import { ChannelLiveCategory } from './channel-live-category.entity';
 
 @Entity({ name: 'channelLive', schema: process.env.DB_SCHEMA_NAME })
 export class ChannelLive extends CoreSoftEntity {
@@ -43,4 +51,11 @@ export class ChannelLive extends CoreSoftEntity {
   )
   @JoinColumn()
   liveLog: ChannelLiveLog;
+
+  @ManyToOne(
+    () => ChannelLiveCategory,
+    (channelLiveCategory) => channelLiveCategory.id,
+  )
+  @JoinColumn()
+  liveCategory: ChannelLiveCategory;
 }
