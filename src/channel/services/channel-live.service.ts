@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ChannelLiveRepository } from '../repositories/channel-live.repository';
 import { GenerateChannelLiveDto } from '../dtos/generate-channel-live.dto';
+import { ModifyChannelLiveDto } from '../dtos/modify-channel-live.dto';
 
 @Injectable()
 export class ChannelLiveService {
@@ -15,6 +16,16 @@ export class ChannelLiveService {
   async generateChannelLive(generateChannelLiveDto: GenerateChannelLiveDto) {
     return await this.channelLiveRepository.generateChannelLive(
       generateChannelLiveDto,
+    );
+  }
+
+  async modifyChannelLive(
+    id: number,
+    modifyChannelLiveDto: ModifyChannelLiveDto,
+  ) {
+    return await this.channelLiveRepository.modifyChannelLive(
+      id,
+      modifyChannelLiveDto,
     );
   }
 }

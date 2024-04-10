@@ -7,4 +7,5 @@ export class GenerateChannelLiveLogDto extends PickType(ChannelLiveLogDto, [
   'concurrentUserCount',
   'minFollowerMinute',
   'channelLive',
+  'liveCategory',
 ]) {}

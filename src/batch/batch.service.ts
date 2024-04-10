@@ -1,16 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { ChannelLiveCategoryDto } from 'src/channel/dtos/channel-live-category.dto';
 import { ChannelLiveDto } from 'src/channel/dtos/channel-live.dto';
+import { ChannelDto } from 'src/channel/dtos/channel.dto';
 import { GenerateChannelLiveCategoryDto } from 'src/channel/dtos/generate-channel-live-category.dto';
 import { GenerateChannelLiveLogDto } from 'src/channel/dtos/generate-channel-live-log.dto';
 import { GenerateChannelLiveDto } from 'src/channel/dtos/generate-channel-live.dto';
+import { ModifyChannelLiveDto } from 'src/channel/dtos/modify-channel-live.dto';
 import { ModifyChannelDto } from 'src/channel/dtos/modify-channel.dto';
+import { ChannelLiveCategory } from 'src/channel/entities/channel-live-category.entity';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { ChannelLiveCategoryService } from 'src/channel/services/channel-live-category.service';
 import { ChannelLiveLogService } from 'src/channel/services/channel-live-log.service';
 import { ChannelLiveService } from 'src/channel/services/channel-live.service';
 import { ChannelService } from 'src/channel/services/channel.service';
 import { ChzzkService } from 'src/chzzk/chzzk.service';
+import { ChzzkChannelDetailDto } from 'src/chzzk/dtos/chzzk-channel-live-detail.dto';
 import { ChzzkChannelDto } from 'src/chzzk/dtos/chzzk-channel.dto';
 @Injectable()
 export class BatchService {
@@ -62,74 +67,16 @@ export class BatchService {
         channelId,
       );
 
+      const channelLiveCategory = await this.findOrGenerateChannelLiveCategory(
+        chzzkChannelDetail,
+      );
+
       if (chzzkChannelDetail.liveId) {
-        const channelLive =
-          await this.channelLiveService.findChannelLiveByLiveId(
-            chzzkChannelDetail.liveId,
-          );
-
-        let channelLiveCategory;
-        channelLiveCategory =
-          await this.channelLiveCategoryService.findChannelLiveCategoryByLiveId(
-            chzzkChannelDetail.categoryType,
-            chzzkChannelDetail.liveCategory,
-          );
-
-        if (!channelLiveCategory) {
-          const generateChannelLiveCategoryDto =
-            new GenerateChannelLiveCategoryDto();
-
-          generateChannelLiveCategoryDto.categoryType =
-            chzzkChannelDetail.categoryType;
-          generateChannelLiveCategoryDto.liveCategory =
-            chzzkChannelDetail.liveCategory;
-          generateChannelLiveCategoryDto.liveCategoryValue =
-            chzzkChannelDetail.liveCategoryValue;
-
-          channelLiveCategory =
-            await this.channelLiveCategoryService.generateChannelLiveCategory(
-              generateChannelLiveCategoryDto,
-            );
-        }
-
-        if (!channelLive) {
-          const generateChannelLiveDto = new GenerateChannelLiveDto();
-          generateChannelLiveDto.channel = channel;
-          generateChannelLiveDto.chatChannelId =
-            chzzkChannelDetail.chatChannelId;
-          generateChannelLiveDto.liveId = chzzkChannelDetail.liveId;
-          generateChannelLiveDto.liveTitle = chzzkChannelDetail.liveTitle;
-          generateChannelLiveDto.status =
-            chzzkChannelDetail.status === 'OPEN' ? true : false;
-          generateChannelLiveDto.liveCategory = channelLiveCategory;
-
-          const generateChannelLiveLogDto = new GenerateChannelLiveLogDto();
-          generateChannelLiveLogDto.accumulateCount =
-            chzzkChannelDetail.accumulateCount;
-          generateChannelLiveLogDto.concurrentUserCount =
-            chzzkChannelDetail.concurrentUserCount;
-          generateChannelLiveLogDto.minFollowerMinute =
-            chzzkChannelDetail.minFollowerMinute;
-          generateChannelLiveLogDto.liveTitle = chzzkChannelDetail.liveTitle;
-
-          await this.channelLiveService.generateChannelLive(
-            generateChannelLiveDto,
-          );
-        } else {
-          const generateChannelLiveLogDto = new GenerateChannelLiveLogDto();
-          generateChannelLiveLogDto.accumulateCount =
-            chzzkChannelDetail.accumulateCount;
-          generateChannelLiveLogDto.concurrentUserCount =
-            chzzkChannelDetail.concurrentUserCount;
-          generateChannelLiveLogDto.minFollowerMinute =
-            chzzkChannelDetail.minFollowerMinute;
-          generateChannelLiveLogDto.liveTitle = chzzkChannelDetail.liveTitle;
-          generateChannelLiveLogDto.channelLive = channelLive;
-
-          await this.channelLiveLogService.generateChannelLiveLog(
-            generateChannelLiveLogDto,
-          );
-        }
+        await this.upsertChannelLive(
+          channel,
+          chzzkChannelDetail,
+          channelLiveCategory,
+        );
       }
     }
   }
@@ -144,5 +91,94 @@ export class BatchService {
       return true;
     }
     return false;
+  }
+  async findOrGenerateChannelLiveCategory(
+    chzzkChannelDetail: ChzzkChannelDetailDto,
+  ): Promise<ChannelLiveCategory> {
+    let channelLiveCategory: ChannelLiveCategory;
+    channelLiveCategory =
+      await this.channelLiveCategoryService.findChannelLiveCategory(
+        chzzkChannelDetail.categoryType,
+        chzzkChannelDetail.liveCategory,
+      );
+
+    if (!channelLiveCategory) {
+      const generateChannelLiveCategoryDto =
+        new GenerateChannelLiveCategoryDto();
+
+      generateChannelLiveCategoryDto.categoryType =
+        chzzkChannelDetail.categoryType;
+      generateChannelLiveCategoryDto.liveCategory =
+        chzzkChannelDetail.liveCategory;
+      generateChannelLiveCategoryDto.liveCategoryValue =
+        chzzkChannelDetail.liveCategoryValue;
+
+      channelLiveCategory =
+        await this.channelLiveCategoryService.generateChannelLiveCategory(
+          generateChannelLiveCategoryDto,
+        );
+    }
+
+    return channelLiveCategory;
+  }
+  async upsertChannelLive(
+    channel: ChannelDto,
+    chzzkChannelDetail: ChzzkChannelDetailDto,
+    channelLiveCategory: ChannelLiveCategoryDto,
+  ) {
+    const channelLive = await this.channelLiveService.findChannelLiveByLiveId(
+      chzzkChannelDetail.liveId,
+    );
+
+    if (!channelLive) {
+      const generateChannelLiveDto = new GenerateChannelLiveDto();
+      generateChannelLiveDto.channel = channel;
+      generateChannelLiveDto.chatChannelId = chzzkChannelDetail.chatChannelId;
+      generateChannelLiveDto.liveId = chzzkChannelDetail.liveId;
+      generateChannelLiveDto.liveTitle = chzzkChannelDetail.liveTitle;
+      generateChannelLiveDto.status =
+        chzzkChannelDetail.status === 'OPEN' ? true : false;
+      generateChannelLiveDto.liveCategory = channelLiveCategory;
+
+      await this.channelLiveService.generateChannelLive(generateChannelLiveDto);
+    } else {
+      const modifyChannelLiveDto = new ModifyChannelLiveDto();
+      modifyChannelLiveDto.chatChannelId = chzzkChannelDetail.chatChannelId;
+      modifyChannelLiveDto.liveTitle = chzzkChannelDetail.liveTitle;
+      modifyChannelLiveDto.status =
+        chzzkChannelDetail.status === 'OPEN' ? true : false;
+      modifyChannelLiveDto.liveCategory = channelLiveCategory;
+
+      await this.channelLiveService.modifyChannelLive(
+        channelLive.id,
+        modifyChannelLiveDto,
+      );
+    }
+
+    await this.generateChannelLiveLog(
+      chzzkChannelDetail,
+      channelLive,
+      channelLiveCategory,
+    );
+  }
+  async generateChannelLiveLog(
+    chzzkChannelDetail: ChzzkChannelDetailDto,
+    channelLive: ChannelLiveDto,
+    channelLiveCategory: ChannelLiveCategoryDto,
+  ) {
+    const generateChannelLiveLogDto = new GenerateChannelLiveLogDto();
+    generateChannelLiveLogDto.accumulateCount =
+      chzzkChannelDetail.accumulateCount;
+    generateChannelLiveLogDto.concurrentUserCount =
+      chzzkChannelDetail.concurrentUserCount;
+    generateChannelLiveLogDto.minFollowerMinute =
+      chzzkChannelDetail.minFollowerMinute;
+    generateChannelLiveLogDto.liveTitle = chzzkChannelDetail.liveTitle;
+    generateChannelLiveLogDto.channelLive = channelLive;
+    generateChannelLiveLogDto.liveCategory = channelLiveCategory;
+
+    await this.channelLiveLogService.generateChannelLiveLog(
+      generateChannelLiveLogDto,
+    );
   }
 }

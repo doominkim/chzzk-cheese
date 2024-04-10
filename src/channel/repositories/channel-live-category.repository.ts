@@ -11,7 +11,7 @@ export class ChannelLiveCategoryRepository {
     private repository: Repository<ChannelLiveCategory>,
   ) {}
 
-  async findChannelLiveCategoryByLiveId(
+  async findChannelLiveCategory(
     categoryType: string,
     liveCategory: string,
   ): Promise<ChannelLiveCategory> {
@@ -24,7 +24,7 @@ export class ChannelLiveCategoryRepository {
 
   async generateChannelLiveCategory(
     generateChannelLiveCategoryDto: GenerateChannelLiveCategoryDto,
-  ) {
+  ): Promise<ChannelLiveCategory> {
     const instance = this.repository.create({
       ...generateChannelLiveCategoryDto,
     });
