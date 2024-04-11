@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Query } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiProperty, ApiTags } from '@nestjs/swagger';
 import { ChannelService } from '../services/channel.service';
 import { GenerateChannelDto } from '../dtos/generate-channel.dto';
@@ -22,5 +22,29 @@ export class ChannelController {
   @Post()
   async generateChannel(@Query() generateChannelDto: GenerateChannelDto) {
     return this.channelService.generateChannel(generateChannelDto);
+  }
+
+  @ApiProperty({
+    description: '최근 방송활동내역 조회',
+  })
+  @Get(':id/recentActivity')
+  async getRecentActivity(@Param('id') id: string) {
+    return this.channelService.getRecentActivity(id);
+  }
+
+  @ApiProperty({
+    description: '방송시간 캘린더',
+  })
+  @Get(':id/calendar')
+  async getCalendar(@Param('id') id: string) {
+    return this.channelService.getCalendar(id);
+  }
+
+  @ApiProperty({
+    description: '종합방송 카테고리 순위',
+  })
+  @Get(':id/rank')
+  async getRank(@Param('id') id: string) {
+    return this.channelService.getRank(id);
   }
 }

@@ -22,9 +22,9 @@ const envValidationSchema = Joi.object({
 });
 
 const conifgModule = [
-  ServeStaticModule.forRoot({
-    rootPath: join(__dirname, '..', 'public'),
-  }),
+  // ServeStaticModule.forRoot({
+  //   rootPath: join(__dirname, '..', 'public'),
+  // }),
   ConfigModule.forRoot({
     isGlobal: true,
     envFilePath,

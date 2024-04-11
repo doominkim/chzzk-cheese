@@ -33,7 +33,22 @@ export class ChannelService {
     }
   }
 
-  async modifyChannel(id, modifyChannelDto: ModifyChannelDto) {
+  async modifyChannel(id: number, modifyChannelDto: ModifyChannelDto) {
     return await this.channelRepository.modifyChannel(id, modifyChannelDto);
   }
+
+  async getRecentActivity(channelId: string) {
+    const channel = await this.findChannelByChannelId(channelId);
+
+    return await this.channelRepository.getRecentActivityById(
+      channel.id,
+      channel.openLive,
+    );
+  }
+  async getCalendar(id: string) {
+    const channel = await this.findChannelByChannelId(id);
+
+    return await this.channelRepository.getCalendarValueById(channel.id);
+  }
+  async getRank(id: string) {}
 }
