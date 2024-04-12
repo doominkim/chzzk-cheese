@@ -37,15 +37,31 @@ export class ChannelRepository {
 
   async findChannelById(id: number): Promise<Channel> {
     return await this.repository
-      .createQueryBuilder('channel')
-      .where('channel.id = :id', { id })
+      .createQueryBuilder('c')
+      .where('c.id = :id', { id })
       .getOne();
   }
 
   async findChannelByChannelId(channelId: string): Promise<Channel> {
     return await this.repository
-      .createQueryBuilder('channel')
-      .where('channel.channelId = :channelId', { channelId })
+      .createQueryBuilder('c')
+      .leftJoinAndMapOne(
+        'c.channelLive',
+        ChannelLive,
+        'cl',
+        'cl.channelId = c.id',
+      )
+      .leftJoinAndMapOne(
+        'cl.liveLog',
+        ChannelLiveLog,
+        'cll',
+        'cll.channelLiveId = cl.id',
+      )
+      .leftJoinAndSelect('cl.liveCategory', 'clc')
+      .orderBy('c.openLive', 'DESC')
+      .addOrderBy('cl.updatedAt', 'DESC')
+      .addOrderBy('cll.createdAt', 'DESC')
+      .where('c.channelId = :channelId', { channelId })
       .getOne();
   }
 
@@ -67,18 +83,22 @@ export class ChannelRepository {
   }
 
   async getRecentActivityById(channelId: number, openLive: boolean) {
-    const query = `
+    let query = `
     SELECT DISTINCT cll."liveTitle", c."channelName", clc."liveCategoryValue", round(avg(cll."concurrentUserCount"), 0) "averageViewers", min(cll."createdAt") "start", max(cll."createdAt") "end" FROM "channelLiveLog" cll 
     LEFT JOIN "channelLive" cl ON cl.id = cll."channelLiveId" 
     LEFT JOIN "channel" c ON c.id = cl."channelId"
     LEFT JOIN "channelLiveCategory" clc ON clc.id = cll."liveCategoryId"
-    WHERE c.id = ${channelId} AND ${
-      openLive
-        ? "to_char(now(), 'YYYYMMDD')"
-        : "to_char(now() - '1 day'::INTERVAL, 'YYYYMMDD')"
-    } = to_char(cll."createdAt", 'YYYYMMDD')
-    GROUP BY cll."liveTitle", c."channelName", clc."liveCategoryValue"
-    ORDER BY "start" ASC`;
+    WHERE c.id = ${channelId} `;
+
+    if (openLive) {
+      query += `AND to_char(now(), 'YYYYMMDD') = to_char(cll."createdAt", 'YYYYMMDD')`;
+    } else {
+      query += `AND (to_char(now(), 'YYYYMMDD') = to_char(cll."createdAt", 'YYYYMMDD')`;
+      query += `OR to_char(now() - '1 day'::INTERVAL, 'YYYYMMDD') = to_char(cll."createdAt", 'YYYYMMDD'))`;
+    }
+
+    query += `GROUP BY cll."liveTitle", c."channelName", clc."liveCategoryValue"`;
+    query += `ORDER BY "start" DESC`;
 
     return await this.repository.query(query);
   }

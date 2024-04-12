@@ -9,11 +9,19 @@ export class ChannelController {
   constructor(private channelService: ChannelService) {}
 
   @ApiProperty({
-    description: '채널 조회',
+    description: '채널 전체 조회',
   })
   @Get()
   async findChannels() {
     return this.channelService.findChannels();
+  }
+
+  @ApiProperty({
+    description: '채널 조회',
+  })
+  @Get(':id')
+  async findChannel(@Param('id') id: string) {
+    return this.channelService.findChannelByChannelId(id);
   }
 
   @ApiProperty({
