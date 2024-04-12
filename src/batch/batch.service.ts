@@ -96,30 +96,41 @@ export class BatchService {
     chzzkChannelDetail: ChzzkChannelDetailDto,
   ): Promise<ChannelLiveCategory> {
     let channelLiveCategory: ChannelLiveCategory;
-    channelLiveCategory =
-      await this.channelLiveCategoryService.findChannelLiveCategory(
-        chzzkChannelDetail.categoryType,
-        chzzkChannelDetail.liveCategory,
-      );
-
-    if (!channelLiveCategory) {
-      const generateChannelLiveCategoryDto =
-        new GenerateChannelLiveCategoryDto();
-
-      generateChannelLiveCategoryDto.categoryType =
-        chzzkChannelDetail.categoryType;
-      generateChannelLiveCategoryDto.liveCategory =
-        chzzkChannelDetail.liveCategory;
-      generateChannelLiveCategoryDto.liveCategoryValue =
-        chzzkChannelDetail.liveCategoryValue;
+    try {
+      if (
+        !chzzkChannelDetail.categoryType ||
+        !chzzkChannelDetail.liveCategory
+      ) {
+        throw new Error('선택된 카테고리가 없습니다.');
+      }
 
       channelLiveCategory =
-        await this.channelLiveCategoryService.generateChannelLiveCategory(
-          generateChannelLiveCategoryDto,
+        await this.channelLiveCategoryService.findChannelLiveCategory(
+          chzzkChannelDetail.categoryType,
+          chzzkChannelDetail.liveCategory,
         );
-    }
 
-    return channelLiveCategory;
+      if (!channelLiveCategory) {
+        const generateChannelLiveCategoryDto =
+          new GenerateChannelLiveCategoryDto();
+
+        generateChannelLiveCategoryDto.categoryType =
+          chzzkChannelDetail.categoryType;
+        generateChannelLiveCategoryDto.liveCategory =
+          chzzkChannelDetail.liveCategory;
+        generateChannelLiveCategoryDto.liveCategoryValue =
+          chzzkChannelDetail.liveCategoryValue;
+
+        channelLiveCategory =
+          await this.channelLiveCategoryService.generateChannelLiveCategory(
+            generateChannelLiveCategoryDto,
+          );
+      }
+
+      return channelLiveCategory;
+    } catch (e) {
+      this.logger.error(e);
+    }
   }
   async upsertChannelLive(
     channel: ChannelDto,
