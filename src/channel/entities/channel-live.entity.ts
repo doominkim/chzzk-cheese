@@ -22,7 +22,7 @@ export class ChannelLive extends CoreSoftEntity {
   @IsString()
   liveTitle: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: false })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   @IsString()
   chatChannelId: string;
 

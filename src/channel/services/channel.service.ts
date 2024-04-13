@@ -50,5 +50,9 @@ export class ChannelService {
 
     return await this.channelRepository.getCalendarValueById(channel.id);
   }
-  async getRank(id: string) {}
+  async getLiveCategoryRankById(id: string) {
+    const channel = await this.findChannelByChannelId(id);
+
+    return await this.channelRepository.getLiveCategoryRankById(channel.id);
+  }
 }

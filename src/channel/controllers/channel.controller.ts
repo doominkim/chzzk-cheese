@@ -51,8 +51,8 @@ export class ChannelController {
   @ApiProperty({
     description: '종합방송 카테고리 순위',
   })
-  @Get(':id/rank')
-  async getRank(@Param('id') id: string) {
-    return this.channelService.getRank(id);
+  @Get(':id/liveCategoryRank')
+  async getLiveCategoryRankById(@Param('id') id: string) {
+    return this.channelService.getLiveCategoryRankById(id);
   }
 }

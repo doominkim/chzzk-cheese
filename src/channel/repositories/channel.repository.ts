@@ -114,4 +114,16 @@ export class ChannelRepository {
 
     return await this.repository.query(query);
   }
+
+  async getLiveCategoryRankById(channelId: number) {
+    const query = `
+    SELECT clc."liveCategoryValue", count(*) FROM channel c
+    JOIN "channelLive" cl on cl."channelId" = c.id
+    JOIN "channelLiveLog" cll on cll."channelLiveId" = cl.id 
+    JOIN "channelLiveCategory" clc ON clc.id = cll."liveCategoryId" 
+    WHERE c.id = ${channelId}
+    GROUP BY clc.id`;
+
+    return await this.repository.query(query);
+  }
 }
