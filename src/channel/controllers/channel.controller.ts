@@ -2,6 +2,7 @@ import { Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiProperty, ApiTags } from '@nestjs/swagger';
 import { ChannelService } from '../services/channel.service';
 import { GenerateChannelDto } from '../dtos/generate-channel.dto';
+import { FindChannelDto } from '../dtos/find-channel.dto';
 
 @ApiTags('채널 관리')
 @Controller('channel')
@@ -12,8 +13,8 @@ export class ChannelController {
     description: '채널 전체 조회',
   })
   @Get()
-  async findChannels() {
-    return this.channelService.findChannels();
+  async findChannels(@Query() findChannelDto: FindChannelDto) {
+    return this.channelService.findChannels(findChannelDto);
   }
 
   @ApiProperty({

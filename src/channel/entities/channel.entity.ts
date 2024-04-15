@@ -1,9 +1,10 @@
-import { IsBoolean, IsNumber, IsString } from 'class-validator';
+import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Column, Entity, JoinColumn, OneToMany, Unique } from 'typeorm';
 import { ChannelLive } from './channel-live.entity';
 import { ApiProperty } from '@nestjs/swagger';
-import { Expose, Type } from 'class-transformer';
+import { Expose, Transform, Type } from 'class-transformer';
 import { CoreSoftEntity } from 'src/common/entities/core-soft.entity';
+import { ChannelChatLog } from './channel-chat-log.entity';
 
 @Entity({ name: 'channel', schema: process.env.DB_SCHEMA_NAME })
 @Unique(['channelId'])
@@ -18,10 +19,11 @@ export class Channel extends CoreSoftEntity {
   channelId: string;
 
   @ApiProperty({
-    required: true,
+    required: false,
     type: String,
   })
   @Column({ type: 'varchar', length: 100, nullable: false })
+  @IsOptional()
   @IsString()
   channelName: string;
 
@@ -47,6 +49,7 @@ export class Channel extends CoreSoftEntity {
     type: Boolean,
   })
   @Column({ type: 'boolean', nullable: false, default: false })
+  @IsOptional()
   @IsBoolean()
   openLive: boolean;
 
@@ -62,4 +65,19 @@ export class Channel extends CoreSoftEntity {
   @OneToMany(() => ChannelLive, (channelLive) => channelLive.channel)
   @JoinColumn()
   channelLive: ChannelLive;
+
+  @OneToMany(() => ChannelChatLog, (channelChatLog) => channelChatLog.channel)
+  @JoinColumn()
+  channelChatLog: ChannelChatLog;
+
+  @Type(() => Boolean)
+  @Transform(({ value }) => Boolean(value))
+  @ApiProperty({
+    required: false,
+    type: Boolean,
+  })
+  @Column({ type: 'boolean', nullable: false, default: false })
+  @IsOptional()
+  @IsBoolean()
+  isChatCollected: boolean;
 }

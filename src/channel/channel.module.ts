@@ -15,6 +15,8 @@ import { ChannelLiveCategoryService } from './services/channel-live-category.ser
 import { ChannelLiveLogRepository } from './repositories/channel-live-log.repository';
 import { ChannelLiveRepository } from './repositories/channel-live.repository';
 import { ChannelLiveCategoryRepository } from './repositories/channel-live-category.repository';
+import { ChannelChatLogRepository } from './repositories/channel-chat-log.repository';
+import { ChannelChatLogService } from './services/channel-chat-log.service';
 
 @Module({
   imports: [
@@ -37,12 +39,15 @@ import { ChannelLiveCategoryRepository } from './repositories/channel-live-categ
     ChannelLiveLogRepository,
     ChannelLiveRepository,
     ChannelLiveCategoryRepository,
+    ChannelChatLogService,
+    ChannelChatLogRepository,
   ],
   exports: [
     ChannelService,
     ChannelLiveService,
     ChannelLiveLogService,
     ChannelLiveCategoryService,
+    ChannelChatLogService,
   ],
 })
 export class ChannelModule {}

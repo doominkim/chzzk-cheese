@@ -28,7 +28,7 @@
     "@nestjs/serve-static": "^4.0.1",
     "@nestjs/swagger": "^7.3.1",
     "@nestjs/typeorm": "^10.0.2",
-    "chzzk-z": "^0.1.5",
+    "chzzk-z": "^0.1.10",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "cross-env": "^7.0.3",

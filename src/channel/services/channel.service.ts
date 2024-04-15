@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ChannelRepository } from '../repositories/channel.repository';
 import { GenerateChannelDto } from '../dtos/generate-channel.dto';
 import { ModifyChannelDto } from '../dtos/modify-channel.dto';
+import { FindChannelDto } from '../dtos/find-channel.dto';
 
 @Injectable()
 export class ChannelService {
@@ -9,9 +10,9 @@ export class ChannelService {
 
   constructor(private channelRepository: ChannelRepository) {}
 
-  async findChannels() {
+  async findChannels(findChannelDto?: FindChannelDto) {
     try {
-      return await this.channelRepository.findChannels();
+      return await this.channelRepository.findChannels(findChannelDto);
     } catch (e) {
       this.logger.error(e);
     }

@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { ChannelLiveCategoryDto } from 'src/channel/dtos/channel-live-category.dto';
 import { ChannelLiveDto } from 'src/channel/dtos/channel-live.dto';
 import { ChannelDto } from 'src/channel/dtos/channel.dto';
+import { FindChannelDto } from 'src/channel/dtos/find-channel.dto';
 import { GenerateChannelLiveCategoryDto } from 'src/channel/dtos/generate-channel-live-category.dto';
 import { GenerateChannelLiveLogDto } from 'src/channel/dtos/generate-channel-live-log.dto';
 import { GenerateChannelLiveDto } from 'src/channel/dtos/generate-channel-live.dto';
@@ -17,9 +18,13 @@ import { ChannelService } from 'src/channel/services/channel.service';
 import { ChzzkService } from 'src/chzzk/chzzk.service';
 import { ChzzkChannelDetailDto } from 'src/chzzk/dtos/chzzk-channel-live-detail.dto';
 import { ChzzkChannelDto } from 'src/chzzk/dtos/chzzk-channel.dto';
+import { ChzzkModule } from 'chzzk-z';
+import { ChannelChatLogService } from 'src/channel/services/channel-chat-log.service';
+import { GenerateChannelChatLogDto } from 'src/channel/dtos/generate-channel-cat-log.dto';
 @Injectable()
 export class BatchService {
   private readonly logger = new Logger(BatchService.name);
+  private readonly chzzkModules: Map<string, ChzzkModule>;
 
   constructor(
     private chzzkService: ChzzkService,
@@ -27,14 +32,62 @@ export class BatchService {
     private channelLiveService: ChannelLiveService,
     private channelLiveLogService: ChannelLiveLogService,
     private channelLiveCategoryService: ChannelLiveCategoryService,
-  ) {}
+    private channelChatLogService: ChannelChatLogService,
+  ) {
+    this.chzzkModules = new Map<string, ChzzkModule>();
+  }
+
+  @Cron('0 */1 * * * *', {
+    name: 'trackingChannelChats',
+  })
+  async trackingChannelChats() {
+    const findChannelDto = new FindChannelDto();
+    findChannelDto.openLive = true;
+    findChannelDto.isChatCollected = true;
+    const channels = await this.channelService.findChannels(findChannelDto);
+
+    for (const channel of channels) {
+      const { channelId } = channel;
+      const chzzkModule = this.chzzkModules.get(channelId);
+      if (!chzzkModule) {
+        const newChzzkModule = new ChzzkModule();
+        newChzzkModule.chat.join(channelId);
+        this.chzzkModules.set(channelId, newChzzkModule);
+
+        setInterval(() => {
+          const events = newChzzkModule.chat.pollingEvent();
+          for (const event of events) {
+            const generateChannelChatLogDto = new GenerateChannelChatLogDto();
+            generateChannelChatLogDto.chatType = event.type;
+            generateChannelChatLogDto.message = event.msg;
+            generateChannelChatLogDto.chatChannelId = event.cid;
+            generateChannelChatLogDto.channel = channel;
+
+            if (event?.profile) {
+              generateChannelChatLogDto.userIdHash = event?.profile?.userIdHash;
+              generateChannelChatLogDto.nickname = event?.profile.nickname;
+            }
+
+            generateChannelChatLogDto.profile = event?.profile;
+            generateChannelChatLogDto.extras = event?.extras;
+
+            this.channelChatLogService.generateChannelChatLog(
+              generateChannelChatLogDto,
+            );
+          }
+        }, 1000);
+      }
+    }
+  }
 
   @Cron('0 */1 * * * *', {
     name: 'trackingChannels',
   })
   async trackingChannels() {
     try {
-      const channels = await this.channelService.findChannels();
+      const findChannelDto = new FindChannelDto();
+      findChannelDto.openLive = true;
+      const channels = await this.channelService.findChannels(findChannelDto);
 
       for (const channel of channels) {
         await this.trackingChannel(channel);

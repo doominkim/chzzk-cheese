@@ -5,6 +5,7 @@ import { GenerateChannelDto } from '../dtos/generate-channel.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ChannelLive } from '../entities/channel-live.entity';
 import { ChannelLiveLog } from '../entities/channel-live-log.entity';
+import { FindChannelDto } from '../dtos/find-channel.dto';
 
 @Injectable()
 export class ChannelRepository {
@@ -13,8 +14,9 @@ export class ChannelRepository {
     private repository: Repository<Channel>,
   ) {}
 
-  async findChannels(): Promise<Channel[]> {
-    return await this.repository
+  async findChannels(findChannelDto: FindChannelDto): Promise<Channel[]> {
+    const { channelName, isChatCollected, openLive } = findChannelDto;
+    const query = this.repository
       .createQueryBuilder('c')
       .leftJoinAndMapOne(
         'c.channelLive',
@@ -29,10 +31,28 @@ export class ChannelRepository {
         'cll.channelLiveId = cl.id',
       )
       .leftJoinAndSelect('cl.liveCategory', 'clc')
+      .where('1=1')
       .orderBy('c.openLive', 'DESC')
       .addOrderBy('cl.updatedAt', 'DESC')
-      .addOrderBy('cll.createdAt', 'DESC')
-      .getMany();
+      .addOrderBy('cll.createdAt', 'DESC');
+
+    if (channelName) {
+      query.andWhere('c.channelName ILIKE :channelName', {
+        channelName: `%${channelName}%`,
+      });
+    }
+
+    if (isChatCollected) {
+      query.andWhere('c.isChatCollected = :isChatCollected', {
+        isChatCollected,
+      });
+    }
+
+    if (openLive) {
+      query.andWhere('c.openLive = :openLive', { openLive });
+    }
+
+    return await query.getMany();
   }
 
   async findChannelById(id: number): Promise<Channel> {

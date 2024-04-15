@@ -34,13 +34,12 @@ export class ChzzkRepository extends Chzzk {
   async joinChannel(channelId: string) {
     try {
       await this.chat.join(channelId);
-      await this.chat.connect();
     } catch (error) {
       throw error;
     }
   }
 
   async leaveChannel(channelId: string) {
-    return await this.chat.disconnect();
+    return await this.chat.quit();
   }
 }
