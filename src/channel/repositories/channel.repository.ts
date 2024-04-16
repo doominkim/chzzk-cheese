@@ -24,17 +24,17 @@ export class ChannelRepository {
         'cl',
         'cl.channelId = c.id',
       )
-      .leftJoinAndMapOne(
-        'cl.liveLog',
-        ChannelLiveLog,
-        'cll',
-        'cll.channelLiveId = cl.id',
-      )
+      // .leftJoinAndMapOne(
+      //   'cl.liveLog',
+      //   ChannelLiveLog,
+      //   'cll',
+      //   'cll.channelLiveId = cl.id',
+      // )
       .leftJoinAndSelect('cl.liveCategory', 'clc')
       .where('1=1')
       .orderBy('c.openLive', 'DESC')
-      .addOrderBy('cl.updatedAt', 'DESC')
-      .addOrderBy('cll.createdAt', 'DESC');
+      .addOrderBy('cl.updatedAt', 'DESC');
+    // .addOrderBy('cll.createdAt', 'DESC');
 
     if (channelName) {
       query.andWhere('c.channelName ILIKE :channelName', {

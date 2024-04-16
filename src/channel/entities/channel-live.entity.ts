@@ -1,12 +1,5 @@
 import { IsBoolean, IsNumber, IsString } from 'class-validator';
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToMany,
-  ManyToOne,
-  OneToMany,
-} from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { Channel } from './channel.entity';
 import { CoreSoftEntity } from 'src/common/entities/core-soft.entity';
 import { ChannelLiveLog } from './channel-live-log.entity';
@@ -48,6 +41,7 @@ export class ChannelLive extends CoreSoftEntity {
   @OneToMany(
     () => ChannelLiveLog,
     (channelLiveLog) => channelLiveLog.channelLive,
+    // { eager: false },
   )
   @JoinColumn()
   liveLog: ChannelLiveLog;

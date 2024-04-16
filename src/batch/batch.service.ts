@@ -61,10 +61,9 @@ export class BatchService {
             generateChannelChatLogDto.chatType = event.type;
             generateChannelChatLogDto.message = event.msg;
             generateChannelChatLogDto.chatChannelId = event.cid;
+            generateChannelChatLogDto.userIdHash = event.uid;
             generateChannelChatLogDto.channel = channel;
-
             if (event?.profile) {
-              generateChannelChatLogDto.userIdHash = event?.profile?.userIdHash;
               generateChannelChatLogDto.nickname = event?.profile.nickname;
             }
 
