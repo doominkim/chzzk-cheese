@@ -54,6 +54,47 @@ export class ChannelRepository {
 
     return await query.getMany();
   }
+  async findChannelsForBatch(
+    findChannelDto: FindChannelDto,
+  ): Promise<Channel[]> {
+    const { channelName, isChatCollected, openLive } = findChannelDto;
+    const query = this.repository
+      .createQueryBuilder('c')
+      .leftJoinAndMapOne(
+        'c.channelLive',
+        ChannelLive,
+        'cl',
+        'cl.channelId = c.id',
+      )
+      .leftJoinAndMapOne(
+        'cl.liveLog',
+        ChannelLiveLog,
+        'cll',
+        'cll.channelLiveId = cl.id',
+      )
+      .leftJoinAndSelect('cl.liveCategory', 'clc')
+      .where('1=1')
+      .orderBy('c.openLive', 'DESC')
+      .addOrderBy('cl.updatedAt', 'DESC');
+
+    if (channelName) {
+      query.andWhere('c.channelName ILIKE :channelName', {
+        channelName: `%${channelName}%`,
+      });
+    }
+
+    if (isChatCollected) {
+      query.andWhere('c.isChatCollected = :isChatCollected', {
+        isChatCollected,
+      });
+    }
+
+    if (openLive) {
+      query.andWhere('c.openLive = :openLive', { openLive });
+    }
+
+    return await query.getMany();
+  }
 
   async findChannelById(id: number): Promise<Channel> {
     return await this.repository

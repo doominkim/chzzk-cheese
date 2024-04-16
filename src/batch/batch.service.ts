@@ -85,8 +85,9 @@ export class BatchService {
   async trackingChannels() {
     try {
       const findChannelDto = new FindChannelDto();
-      findChannelDto.openLive = true;
-      const channels = await this.channelService.findChannels(findChannelDto);
+      const channels = await this.channelService.findChannelsForBatch(
+        findChannelDto,
+      );
 
       for (const channel of channels) {
         await this.trackingChannel(channel);

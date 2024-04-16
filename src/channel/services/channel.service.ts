@@ -18,6 +18,14 @@ export class ChannelService {
     }
   }
 
+  async findChannelsForBatch(findChannelDto?: FindChannelDto) {
+    try {
+      return await this.channelRepository.findChannelsForBatch(findChannelDto);
+    } catch (e) {
+      this.logger.error(e);
+    }
+  }
+
   async findChannelById(id: number) {
     return await this.channelRepository.findChannelById(id);
   }
