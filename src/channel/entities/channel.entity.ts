@@ -7,7 +7,7 @@ import { CoreSoftEntity } from 'src/common/entities/core-soft.entity';
 import { ChannelChatLog } from './channel-chat-log.entity';
 
 @Entity({ name: 'channel', schema: process.env.DB_SCHEMA_NAME })
-@Unique(['channelId'])
+@Unique(['uuid'])
 export class Channel extends CoreSoftEntity {
   @Expose()
   @ApiProperty({
@@ -16,7 +16,7 @@ export class Channel extends CoreSoftEntity {
   })
   @Column({ type: 'varchar', length: 40, nullable: false })
   @IsString()
-  channelId: string;
+  uuid: string;
 
   @ApiProperty({
     required: false,

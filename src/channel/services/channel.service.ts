@@ -30,8 +30,8 @@ export class ChannelService {
     return await this.channelRepository.findChannelById(id);
   }
 
-  async findChannelByChannelId(channelId: string) {
-    return await this.channelRepository.findChannelByChannelId(channelId);
+  async findChannelByUUID(uuid: string) {
+    return await this.channelRepository.findChannelByUUID(uuid);
   }
 
   async generateChannel(generateChannelDto: GenerateChannelDto) {
@@ -46,21 +46,21 @@ export class ChannelService {
     return await this.channelRepository.modifyChannel(id, modifyChannelDto);
   }
 
-  async getRecentActivity(channelId: string) {
-    const channel = await this.findChannelByChannelId(channelId);
+  async getRecentActivity(uuid: string) {
+    const channel = await this.findChannelByUUID(uuid);
 
     return await this.channelRepository.getRecentActivityById(
       channel.id,
       channel.openLive,
     );
   }
-  async getCalendar(id: string) {
-    const channel = await this.findChannelByChannelId(id);
+  async getCalendar(uuid: string) {
+    const channel = await this.findChannelByUUID(uuid);
 
     return await this.channelRepository.getCalendarValueById(channel.id);
   }
-  async getLiveCategoryRankById(id: string) {
-    const channel = await this.findChannelByChannelId(id);
+  async getLiveCategoryRankById(uuid: string) {
+    const channel = await this.findChannelByUUID(uuid);
 
     return await this.channelRepository.getLiveCategoryRankById(channel.id);
   }

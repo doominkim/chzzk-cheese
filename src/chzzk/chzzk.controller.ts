@@ -21,14 +21,14 @@ export class ChzzkController {
     return await this.chzzkService.getChannelById(channelId);
   }
 
-  @Get('channel/:channelId/live-status')
+  @Get('channel/:channelId/liveStatus')
   async getChannelLiveStatus(@Param('channelId') channelId: string) {
     console.log('channelId =>', channelId);
 
     return await this.chzzkService.getChannelLiveStatus(channelId);
   }
 
-  @Get('channel/:channelId/live-detail')
+  @Get('channel/:channelId/liveDetail')
   async getChannelLiveDetail(@Param('channelId') channelId: string) {
     console.log('channelId =>', channelId);
 

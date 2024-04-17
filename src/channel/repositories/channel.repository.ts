@@ -103,7 +103,7 @@ export class ChannelRepository {
       .getOne();
   }
 
-  async findChannelByChannelId(channelId: string): Promise<Channel> {
+  async findChannelByUUID(uuid: string): Promise<Channel> {
     return await this.repository
       .createQueryBuilder('c')
       .leftJoinAndMapOne(
@@ -122,7 +122,7 @@ export class ChannelRepository {
       .orderBy('c.openLive', 'DESC')
       .addOrderBy('cl.updatedAt', 'DESC')
       .addOrderBy('cll.createdAt', 'DESC')
-      .where('c.channelId = :channelId', { channelId })
+      .where('c.uuid = :uuid', { uuid })
       .getOne();
   }
 

@@ -47,12 +47,12 @@ export class BatchService {
     const channels = await this.channelService.findChannels(findChannelDto);
 
     for (const channel of channels) {
-      const { channelId } = channel;
-      const chzzkModule = this.chzzkModules.get(channelId);
+      const { uuid } = channel;
+      const chzzkModule = this.chzzkModules.get(uuid);
       if (!chzzkModule) {
         const newChzzkModule = new ChzzkModule();
-        newChzzkModule.chat.join(channelId);
-        this.chzzkModules.set(channelId, newChzzkModule);
+        newChzzkModule.chat.join(uuid);
+        this.chzzkModules.set(uuid, newChzzkModule);
 
         setInterval(() => {
           const events = newChzzkModule.chat.pollingEvent();
@@ -99,9 +99,9 @@ export class BatchService {
     }
   }
   async trackingChannel(channel: Channel) {
-    const { id, channelId } = channel;
+    const { id, uuid } = channel;
 
-    const chzzkChannel = await this.chzzkService.getChannelById(channelId);
+    const chzzkChannel = await this.chzzkService.getChannelById(uuid);
 
     const isUpdate = this.isUpdateChannel(channel, chzzkChannel);
 
@@ -117,7 +117,7 @@ export class BatchService {
 
     if (chzzkChannel.openLive) {
       const chzzkChannelDetail = await this.chzzkService.getChannelLiveDetail(
-        channelId,
+        uuid,
       );
 
       const channelLiveCategory = await this.findOrGenerateChannelLiveCategory(

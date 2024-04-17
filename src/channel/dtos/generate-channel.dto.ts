@@ -2,7 +2,7 @@ import { PickType } from '@nestjs/swagger';
 import { Channel } from '../entities/channel.entity';
 
 export class GenerateChannelDto extends PickType(Channel, [
-  'channelId',
+  'uuid',
   'channelImageUrl',
   'channelDescription',
   'channelName',
