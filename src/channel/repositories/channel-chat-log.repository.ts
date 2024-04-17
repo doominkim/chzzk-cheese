@@ -30,23 +30,7 @@ export class ChannelChatLogRepository {
 
     const query = this.repository
       .createQueryBuilder('ccl')
-      .groupBy('ccl.nickname')
-      .orderBy('count(*)', 'DESC')
-      .select(
-        `(CASE WHEN ccl.nickname IS NULL THEN '익명의 후원자' ELSE ccl.nickname END)`,
-        'nickname',
-      )
-      .addSelect("sum((ccl.extras -> 'payAmount')::int)::int", 'donateAmount')
-      .addSelect('count(*)::int', 'donateCount')
       .where(`(ccl.extras -> 'payAmount')::int > 0`);
-
-    if (fromCreatedAt) {
-      query.andWhere('ccl.createdAt >= :fromCreatedAt', { fromCreatedAt });
-    }
-
-    if (toCreatedAt) {
-      query.andWhere('ccl.createdAt <= :toCreatedAt', { toCreatedAt });
-    }
 
     if (uuid) {
       query.leftJoinAndMapOne(
@@ -58,6 +42,65 @@ export class ChannelChatLogRepository {
       query.andWhere('c.uuid = :uuid', { uuid });
     }
 
+    if (fromCreatedAt) {
+      query.andWhere('ccl.createdAt >= :fromCreatedAt', { fromCreatedAt });
+    }
+
+    if (toCreatedAt) {
+      query.andWhere('ccl.createdAt <= :toCreatedAt', { toCreatedAt });
+    }
+
+    if (limit) {
+      query.limit(limit);
+    } else {
+      query.limit(10);
+    }
+
+    query
+      .groupBy('ccl.nickname')
+      .orderBy('"donateAmount"', 'DESC')
+      .select(
+        `(CASE WHEN ccl.nickname IS NULL THEN '익명의 후원자' ELSE ccl.nickname END)`,
+        'nickname',
+      )
+      .addSelect("sum((ccl.extras -> 'payAmount')::int)::int", 'donateAmount')
+      .addSelect('count(*)::int', 'donateCount');
+
+    return await query.getRawMany();
+  }
+  async getDonations(getDonationDto: GetDonationDto) {
+    const { uuid, fromCreatedAt, toCreatedAt, limit } = getDonationDto;
+
+    const query = this.repository
+      .createQueryBuilder('ccl')
+      .where(`ccl."chatType" = 'DONATION'`);
+
+    if (uuid) {
+      query.leftJoinAndMapOne(
+        'ccl.channel',
+        Channel,
+        'c',
+        'ccl.channelId = c.id',
+      );
+      query.andWhere('c.uuid = :uuid', { uuid });
+    }
+
+    if (fromCreatedAt) {
+      query.andWhere('ccl.createdAt >= :fromCreatedAt', { fromCreatedAt });
+    }
+
+    if (toCreatedAt) {
+      query.andWhere('ccl.createdAt <= :toCreatedAt', { toCreatedAt });
+    }
+
+    query
+      .orderBy('ccl.createdAt', 'DESC')
+      .select(`ccl.createdAt`, 'createdAt')
+      .addSelect('ccl.nickname', 'nickname')
+      .addSelect(`ccl.profile -> 'activityBadges'`, 'badges')
+      .addSelect(`(ccl.extras -> 'payAmount')::int`, 'payAmount')
+      .addSelect(`ccl.message`, 'message');
+
     if (limit) {
       query.limit(limit);
     } else {
@@ -66,26 +109,41 @@ export class ChannelChatLogRepository {
 
     return await query.getRawMany();
   }
-  async getDonations(getDonationDto: GetDonationDto) {
-    const { channelId } = getDonationDto;
-    const query = `
-    SELECT to_char(ccl."createdAt", 'YY/MM/DD HH24:MI') "donatedAt", ccl.nickname, ccl.profile -> 'activityBadges' "badges", (ccl.extras -> 'payAmount')::int "donateAmount", message  FROM "channelChatLog" ccl
-    WHERE ccl."chatType" = 'DONATION' AND ccl."channelId" = ${channelId} AND to_char(now(), 'YYYYMMDD') = to_char(ccl."createdAt", 'YYYYMMDD')
-    ORDER BY ccl."createdAt" DESC
-    `;
-
-    return await this.repository.query(query);
-  }
   async getActiveUserRank(getActiveUserRank: GetActiveUserRankDto) {
-    const { channelId } = getActiveUserRank;
-    const query = `
-    SELECT ccl.nickname, count(*) "chatCount" FROM "channelChatLog" ccl
-    WHERE "channelId" = ${channelId}
-    GROUP BY nickname
-    ORDER BY "chatCount" DESC
-    LIMIT 10
-    `;
+    const { uuid, fromCreatedAt, toCreatedAt, limit } = getActiveUserRank;
 
-    return await this.repository.query(query);
+    const query = this.repository.createQueryBuilder('ccl');
+
+    if (uuid) {
+      query.leftJoinAndMapOne(
+        'ccl.channel',
+        Channel,
+        'c',
+        'ccl.channelId = c.id',
+      );
+      query.andWhere('c.uuid = :uuid', { uuid });
+    }
+
+    if (fromCreatedAt) {
+      query.andWhere('ccl.createdAt >= :fromCreatedAt', { fromCreatedAt });
+    }
+
+    if (toCreatedAt) {
+      query.andWhere('ccl.createdAt <= :toCreatedAt', { toCreatedAt });
+    }
+
+    if (limit) {
+      query.limit(limit);
+    } else {
+      query.limit(10);
+    }
+
+    query
+      .groupBy('ccl.nickname')
+      .orderBy('"chatCount"', 'DESC')
+      .select('ccl.nickname', 'nickname')
+      .addSelect('count(*)::int', 'chatCount');
+
+    return await query.getRawMany();
   }
 }

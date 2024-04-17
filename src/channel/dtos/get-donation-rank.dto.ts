@@ -10,6 +10,7 @@ export class GetDonationRankDto {
     example: new Date(),
   })
   @IsDate()
+  @IsOptional()
   fromCreatedAt: Date;
 
   @Type(() => Date)
@@ -19,6 +20,7 @@ export class GetDonationRankDto {
     example: new Date(),
   })
   @IsDate()
+  @IsOptional()
   toCreatedAt: Date;
 
   @ApiProperty({
