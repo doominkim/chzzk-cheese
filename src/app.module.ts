@@ -9,6 +9,8 @@ import envFilePath from 'envs/env';
 import { ChannelModule } from './channel/channel.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ChzzkModule } from './chzzk/chzzk.module';
+import { AuthModule } from './auth/auth.module';
+import { AccountModule } from './account/account.module';
 
 const envValidationSchema = Joi.object({
   PORT: Joi.number().required(),
@@ -51,7 +53,13 @@ const conifgModule = [
   }),
   ScheduleModule.forRoot(),
 ];
-const serviceModule = [BatchModule, ChannelModule, ChzzkModule];
+const serviceModule = [
+  BatchModule,
+  ChannelModule,
+  ChzzkModule,
+  AuthModule,
+  AccountModule,
+];
 @Module({
   imports: [...conifgModule, ...serviceModule],
 })
