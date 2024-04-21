@@ -67,15 +67,16 @@ export class ChannelController {
   @ApiProperty({
     description: '총 후원랭킹',
   })
-  @Get(':uuid/donationRank')
+  @Get('dashboard/donationRank')
   async getDonationRank(@Query() getDonationRankDto: GetDonationRankDto) {
+    console.log(getDonationRankDto);
     return await this.channelChatLogService.getDonationRank(getDonationRankDto);
   }
 
   @ApiProperty({
     description: '후원 모아보기',
   })
-  @Get(':uuid/donations')
+  @Get('dashboard/donations')
   async getDonations(@Query() getDonationDto: GetDonationDto) {
     return await this.channelChatLogService.getDonations(getDonationDto);
   }
@@ -83,7 +84,7 @@ export class ChannelController {
   @ApiProperty({
     description: '유저 활동랭킹',
   })
-  @Get(':uuid/userRank')
+  @Get('dashboard/userRank')
   async getActiveUserRank(@Query() getActiveUserRank: GetActiveUserRankDto) {
     return await this.channelChatLogService.getActiveUserRank(
       getActiveUserRank,
