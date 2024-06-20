@@ -58,8 +58,9 @@ export class BatchService {
 
         setInterval(() => {
           const events = newChzzkModule.chat.pollingEvent();
-          for (const event of events) {
-            this.dataSource.transaction(async (manager) => {
+          this.dataSource.transaction(async (manager) => {
+            const generateChannelChatLogDtos: GenerateChannelChatLogDto[] = [];
+            for (const event of events) {
               const generateChannelChatLogDto = new GenerateChannelChatLogDto();
               generateChannelChatLogDto.chatType = event.type;
               generateChannelChatLogDto.message = event.msg;
@@ -73,12 +74,13 @@ export class BatchService {
               generateChannelChatLogDto.profile = event?.profile;
               generateChannelChatLogDto.extras = event?.extras;
 
-              this.channelChatLogService.generateChannelChatLog(
-                generateChannelChatLogDto,
-                manager,
-              );
-            });
-          }
+              generateChannelChatLogDtos.push(generateChannelChatLogDto);
+            }
+            this.channelChatLogService.generateChannelChatLogs(
+              generateChannelChatLogDtos,
+              manager,
+            );
+          });
         }, 60000);
       }
     }

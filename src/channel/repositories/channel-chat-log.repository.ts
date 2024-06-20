@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ChannelChatLog } from '../entities/channel-chat-log.entity';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, InsertResult, Repository } from 'typeorm';
 import { GenerateChannelChatLogDto } from '../dtos/generate-channel-cat-log.dto';
 import { GetDonationRankDto } from '../dtos/get-donation-rank.dto';
 import { GetDonationDto } from '../dtos/get-donation.dto';
@@ -35,8 +35,16 @@ export class ChannelChatLogRepository {
 
   async generateChannelChatLogs(
     generateChannelChatLogDtos: GenerateChannelChatLogDto[],
+    entityManager?: EntityManager,
   ) {
-    const instance = this.repository.insert(generateChannelChatLogDtos);
+    if (entityManager) {
+      return await entityManager.insert(
+        ChannelChatLog,
+        generateChannelChatLogDtos,
+      );
+    } else {
+      return await this.repository.insert(generateChannelChatLogDtos);
+    }
   }
 
   async getDonationRank(getDonationRankDto: GetDonationRankDto) {

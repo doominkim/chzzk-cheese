@@ -22,6 +22,16 @@ export class ChannelChatLogService {
     );
   }
 
+  async generateChannelChatLogs(
+    generateChannelChatLogDtos: GenerateChannelChatLogDto[],
+    entityManager?: EntityManager,
+  ) {
+    return await this.channelChatLogRepository.generateChannelChatLogs(
+      generateChannelChatLogDtos,
+      entityManager,
+    );
+  }
+
   async getDonationRank(getDonationRankDto: GetDonationRankDto) {
     return await this.channelChatLogRepository.getDonationRank(
       getDonationRankDto,
