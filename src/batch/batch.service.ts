@@ -21,6 +21,7 @@ import { ChzzkChannelDto } from 'src/chzzk/dtos/chzzk-channel.dto';
 import { ChzzkModule } from 'chzzk-z';
 import { ChannelChatLogService } from 'src/channel/services/channel-chat-log.service';
 import { GenerateChannelChatLogDto } from 'src/channel/dtos/generate-channel-cat-log.dto';
+import { DataSource } from 'typeorm';
 @Injectable()
 export class BatchService {
   private readonly logger = new Logger(BatchService.name);
@@ -33,6 +34,7 @@ export class BatchService {
     private channelLiveLogService: ChannelLiveLogService,
     private channelLiveCategoryService: ChannelLiveCategoryService,
     private channelChatLogService: ChannelChatLogService,
+    private dataSource: DataSource,
   ) {
     this.chzzkModules = new Map<string, ChzzkModule>();
   }
@@ -57,24 +59,27 @@ export class BatchService {
         setInterval(() => {
           const events = newChzzkModule.chat.pollingEvent();
           for (const event of events) {
-            const generateChannelChatLogDto = new GenerateChannelChatLogDto();
-            generateChannelChatLogDto.chatType = event.type;
-            generateChannelChatLogDto.message = event.msg;
-            generateChannelChatLogDto.chatChannelId = event.cid;
-            generateChannelChatLogDto.userIdHash = event.uid;
-            generateChannelChatLogDto.channel = channel;
-            if (event?.profile) {
-              generateChannelChatLogDto.nickname = event?.profile.nickname;
-            }
+            this.dataSource.transaction(async (manager) => {
+              const generateChannelChatLogDto = new GenerateChannelChatLogDto();
+              generateChannelChatLogDto.chatType = event.type;
+              generateChannelChatLogDto.message = event.msg;
+              generateChannelChatLogDto.chatChannelId = event.cid;
+              generateChannelChatLogDto.userIdHash = event.uid;
+              generateChannelChatLogDto.channel = channel;
+              if (event?.profile) {
+                generateChannelChatLogDto.nickname = event?.profile.nickname;
+              }
 
-            generateChannelChatLogDto.profile = event?.profile;
-            generateChannelChatLogDto.extras = event?.extras;
+              generateChannelChatLogDto.profile = event?.profile;
+              generateChannelChatLogDto.extras = event?.extras;
 
-            this.channelChatLogService.generateChannelChatLog(
-              generateChannelChatLogDto,
-            );
+              this.channelChatLogService.generateChannelChatLog(
+                generateChannelChatLogDto,
+                manager,
+              );
+            });
           }
-        }, 1000);
+        }, 60000);
       }
     }
   }

@@ -4,6 +4,7 @@ import { GenerateChannelChatLogDto } from '../dtos/generate-channel-cat-log.dto'
 import { GetDonationRankDto } from '../dtos/get-donation-rank.dto';
 import { GetDonationDto } from '../dtos/get-donation.dto';
 import { GetActiveUserRankDto } from '../dtos/get-most-active-user-rank.dto';
+import { EntityManager } from 'typeorm';
 
 @Injectable()
 export class ChannelChatLogService {
@@ -13,9 +14,11 @@ export class ChannelChatLogService {
 
   async generateChannelChatLog(
     generateChannelChatLogDto: GenerateChannelChatLogDto,
+    entityManager?: EntityManager,
   ) {
     return await this.channelChatLogRepository.generateChannelChatLog(
       generateChannelChatLogDto,
+      entityManager,
     );
   }
 
