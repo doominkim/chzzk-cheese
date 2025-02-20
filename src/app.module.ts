@@ -45,11 +45,11 @@ const conifgModule = [
     autoLoadEntities: true,
     // logger: new CustomDbLogger(),
     ssl: process.env.DB_SSL === 'true' ? true : false,
-    extra: {
-      ssl: {
-        rejectUnauthorized: false,
-      },
-    },
+    // extra: {
+    //   ssl: {
+    //     rejectUnauthorized: false,
+    //   },
+    // },
   }),
   ScheduleModule.forRoot(),
 ];
