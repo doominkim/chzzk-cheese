@@ -56,32 +56,40 @@ export class BatchService {
         newChzzkModule.chat.join(uuid);
         this.chzzkModules.set(uuid, newChzzkModule);
 
-        setInterval(() => {
-          const events = newChzzkModule.chat.pollingEvent();
-          this.dataSource.transaction(async (manager) => {
-            const generateChannelChatLogDtos: GenerateChannelChatLogDto[] = [];
-            for (const event of events) {
-              const generateChannelChatLogDto = new GenerateChannelChatLogDto();
-              generateChannelChatLogDto.chatType = event.type;
-              generateChannelChatLogDto.message = event.msg;
-              generateChannelChatLogDto.chatChannelId = event.cid;
-              generateChannelChatLogDto.userIdHash = event.uid;
-              generateChannelChatLogDto.channel = channel;
-              if (event?.profile) {
-                generateChannelChatLogDto.nickname = event?.profile.nickname;
+        try {
+          setInterval(() => {
+            const events = newChzzkModule.chat.pollingEvent();
+            this.dataSource.transaction(async (manager) => {
+              const generateChannelChatLogDtos: GenerateChannelChatLogDto[] =
+                [];
+              for (const event of events) {
+                const generateChannelChatLogDto =
+                  new GenerateChannelChatLogDto();
+                generateChannelChatLogDto.chatType = event.type;
+                generateChannelChatLogDto.message = event.msg;
+                generateChannelChatLogDto.chatChannelId = event.cid;
+                generateChannelChatLogDto.userIdHash = event.uid;
+                generateChannelChatLogDto.channel = channel;
+                if (event?.profile) {
+                  generateChannelChatLogDto.nickname = event?.profile.nickname;
+                }
+
+                generateChannelChatLogDto.profile = event?.profile;
+                generateChannelChatLogDto.extras = event?.extras;
+
+                generateChannelChatLogDtos.push(generateChannelChatLogDto);
               }
-
-              generateChannelChatLogDto.profile = event?.profile;
-              generateChannelChatLogDto.extras = event?.extras;
-
-              generateChannelChatLogDtos.push(generateChannelChatLogDto);
-            }
-            this.channelChatLogService.generateChannelChatLogs(
-              generateChannelChatLogDtos,
-              manager,
-            );
-          });
-        }, 60000);
+              this.channelChatLogService.generateChannelChatLogs(
+                generateChannelChatLogDtos,
+                manager,
+              );
+            });
+          }, 60000);
+        } catch (e) {
+          this.logger.error(e);
+          // 에러가 나는 경우 배치 Map에서 delete
+          this.chzzkModules.delete(uuid);
+        }
       }
     }
   }
