@@ -11,6 +11,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ChzzkModule } from './chzzk/chzzk.module';
 import { AuthModule } from './auth/auth.module';
 import { AccountModule } from './account/account.module';
+import { StreamModule } from './stream/stream.module';
 
 const envValidationSchema = Joi.object({
   PORT: Joi.number().required(),
@@ -59,6 +60,7 @@ const serviceModule = [
   ChzzkModule,
   AuthModule,
   AccountModule,
+  StreamModule,
 ];
 @Module({
   imports: [...conifgModule, ...serviceModule],

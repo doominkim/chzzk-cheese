@@ -28,4 +28,32 @@ export class ChzzkChannelDetailDto {
   livePollingStatusJson: string;
   userAdultStatus: null | string;
   chatDonationRankingExposure: boolean;
+  livePlayback: {
+    meta: {
+      videoId: string;
+      streamSeq: number;
+      liveId: string;
+      paidLive: boolean;
+      cdnInfo: any[];
+      p2p: boolean;
+      cmcdEnabled: boolean;
+      playbackAuthType: string;
+    };
+    serviceMeta: {
+      contentType: string;
+    };
+    live: {
+      start: string;
+      open: string;
+      timeMachine: boolean;
+      status: string;
+    };
+    api: any[];
+    media: any[];
+    thumbnail: {
+      snapshotThumbnailTemplate: string;
+      spriteSeekingThumbnail: any;
+      types: any[];
+    };
+  };
 }
