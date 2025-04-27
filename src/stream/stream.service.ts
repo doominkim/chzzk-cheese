@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { spawn } from 'child_process';
 import { join } from 'path';
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'fs';
-import { ChzzkService } from 'src/chzzk/chzzk.service';
+import { ChzzkService } from '../chzzk/chzzk.service';
+import { MinioService } from '../minio/minio.service';
 
 @Injectable()
 export class StreamService {
@@ -13,7 +14,10 @@ export class StreamService {
   private audioProcess: any;
   private captureProcess: any;
 
-  constructor(private readonly chzzkService: ChzzkService) {
+  constructor(
+    private readonly chzzkService: ChzzkService,
+    private readonly minioService: MinioService,
+  ) {
     // 녹화 디렉토리 생성
     if (!existsSync(this.outputDir)) {
       mkdirSync(this.outputDir, { recursive: true });
@@ -97,25 +101,42 @@ export class StreamService {
       ]);
 
       // 파이프 연결
-      //   this.streamlinkProcess.stdout.pipe(this.videoProcess.stdin);
+      this.streamlinkProcess.stdout.pipe(this.videoProcess.stdin);
       this.streamlinkProcess.stdout.pipe(this.audioProcess.stdin);
       this.streamlinkProcess.stdout.pipe(this.captureProcess.stdin);
 
       // 에러 핸들링
       this.streamlinkProcess.stderr.on('data', (data: Buffer) => {
-        this.logger.log(`Streamlink error: ${data}`);
+        this.logger.error(`Streamlink error: ${data}`);
       });
 
       this.videoProcess.stderr.on('data', (data: Buffer) => {
-        this.logger.log(`Video ffmpeg error: ${data}`);
+        this.logger.error(`Video ffmpeg error: ${data}`);
       });
 
       this.audioProcess.stderr.on('data', (data: Buffer) => {
-        this.logger.log(`Audio ffmpeg error: ${data}`);
+        this.logger.error(`Audio ffmpeg error: ${data}`);
       });
 
       this.captureProcess.stderr.on('data', (data: Buffer) => {
-        this.logger.log(`Capture ffmpeg error: ${data}`);
+        this.logger.error(`Capture ffmpeg error: ${data}`);
+      });
+
+      // 오디오 파일이 생성될 때마다 텍스트로 변환하고 MinIO에 업로드
+      this.audioProcess.on('close', async () => {
+        const files = readdirSync(channelDir);
+        const audioFiles = files.filter((file) => file.endsWith('.aac'));
+        const imageFiles = files.filter((file) => file.endsWith('.jpg'));
+
+        // MinIO에 파일 업로드
+        const {
+          audioFiles: uploadedAudioFiles,
+          imageFiles: uploadedImageFiles,
+        } = await this.minioService.uploadStreamFiles(channelId, channelDir);
+
+        this.logger.log(
+          `Uploaded ${uploadedAudioFiles.length} audio files and ${uploadedImageFiles.length} image files to MinIO`,
+        );
       });
 
       return channelDir;

@@ -12,6 +12,7 @@ import { ChzzkModule } from './chzzk/chzzk.module';
 import { AuthModule } from './auth/auth.module';
 import { AccountModule } from './account/account.module';
 import { StreamModule } from './stream/stream.module';
+import { MinioModule } from './minio/minio.module';
 
 const envValidationSchema = Joi.object({
   PORT: Joi.number().required(),
@@ -61,6 +62,7 @@ const serviceModule = [
   AuthModule,
   AccountModule,
   StreamModule,
+  MinioModule,
 ];
 @Module({
   imports: [...conifgModule, ...serviceModule],

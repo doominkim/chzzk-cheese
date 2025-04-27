@@ -35,3 +35,6 @@ lerna-debug.log*
 !.vscode/extensions.json
 
 output/*
+
+# envs 폴더 무시
+envs/
