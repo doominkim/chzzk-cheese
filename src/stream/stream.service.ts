@@ -6,6 +6,7 @@ import { ChzzkService } from '../chzzk/chzzk.service';
 import { MinioService } from '../minio/minio.service';
 import { LoggerService } from 'src/logger/logger.service';
 import { LogLevel, LogSource } from 'src/logger/logger.entity';
+import { ChannelService } from 'src/channel/services/channel.service';
 
 @Injectable()
 export class StreamService {
@@ -21,6 +22,7 @@ export class StreamService {
     private readonly chzzkService: ChzzkService,
     private readonly minioService: MinioService,
     private readonly logger: LoggerService,
+    private readonly channelService: ChannelService,
   ) {
     if (!existsSync(this.outputDir)) {
       mkdirSync(this.outputDir, { recursive: true });
@@ -161,6 +163,20 @@ export class StreamService {
 
   async startRecording(channelId: string): Promise<string> {
     try {
+      // 채널 설정 확인
+      const channel = await this.channelService.findChannelByUUID(channelId);
+      if (!channel) {
+        throw new Error('채널을 찾을 수 없습니다.');
+      }
+
+      if (!channel.openLive) {
+        throw new Error('채널이 방송을 시작하지 않았습니다.');
+      }
+
+      if (!channel.isAudioCollected && !channel.isCaptureCollected) {
+        throw new Error('오디오 또는 캡처 수집이 활성화되어 있지 않습니다.');
+      }
+
       const live = await this.chzzkService.getChannelLiveDetail(channelId);
       const media = live.livePlayback.media;
       const hls = media.find((media) => media.mediaId === 'HLS');
@@ -191,59 +207,65 @@ export class StreamService {
 
       const timestamp = Date.now();
 
-      // 오디오 세그먼트 프로세스
-      this.audioProcess = spawn('ffmpeg', [
-        '-i',
-        '-',
-        '-map',
-        '0:a',
-        '-c:a',
-        'copy',
-        '-f',
-        'segment',
-        '-segment_time',
-        '10',
-        '-reset_timestamps',
-        '1',
-        '-movflags',
-        '+faststart',
-        '-write_xing',
-        '1',
-        '-id3v2_version',
-        '3',
-        '-timestamp',
-        'now',
-        join(channelDir, `audio_${timestamp}_%03d.aac`),
-      ]);
+      // 오디오 수집이 활성화된 경우
+      if (channel.isAudioCollected) {
+        this.audioProcess = spawn('ffmpeg', [
+          '-i',
+          '-',
+          '-map',
+          '0:a',
+          '-c:a',
+          'copy',
+          '-f',
+          'segment',
+          '-segment_time',
+          '10',
+          '-reset_timestamps',
+          '1',
+          '-movflags',
+          '+faststart',
+          '-write_xing',
+          '1',
+          '-id3v2_version',
+          '3',
+          '-timestamp',
+          'now',
+          join(channelDir, `audio_${timestamp}_%03d.aac`),
+        ]);
+        this.streamlinkProcess.stdout.pipe(this.audioProcess.stdin);
+      }
 
-      // 캡처 프로세스
-      this.captureProcess = spawn('ffmpeg', [
-        '-i',
-        '-',
-        '-f',
-        'image2',
-        '-vf',
-        'fps=0.1',
-        '-timestamp',
-        'now',
-        join(channelDir, `capture_${timestamp}_%03d.jpg`),
-      ]);
-
-      // 파이프 연결
-      this.streamlinkProcess.stdout.pipe(this.audioProcess.stdin);
-      this.streamlinkProcess.stdout.pipe(this.captureProcess.stdin);
+      // 캡처 수집이 활성화된 경우
+      if (channel.isCaptureCollected) {
+        this.captureProcess = spawn('ffmpeg', [
+          '-i',
+          '-',
+          '-f',
+          'image2',
+          '-vf',
+          'fps=0.1',
+          '-timestamp',
+          'now',
+          join(channelDir, `capture_${timestamp}_%03d.jpg`),
+        ]);
+        this.streamlinkProcess.stdout.pipe(this.captureProcess.stdin);
+      }
 
       this.streamlinkProcess.stderr.on('data', (data: Buffer) => {
         this.logger.info(LogSource.STREAM, `Streamlink info: ${data}`);
       });
 
-      this.audioProcess.stderr.on('data', (data: Buffer) => {
-        this.logger.info(LogSource.STREAM, `Audio ffmpeg info: ${data}`);
-      });
+      if (this.audioProcess) {
+        this.audioProcess.stderr.on('data', (data: Buffer) => {
+          this.logger.info(LogSource.STREAM, `Audio ffmpeg info: ${data}`);
+        });
+      }
 
-      this.captureProcess.stderr.on('data', (data: Buffer) => {
-        this.logger.info(LogSource.STREAM, `Capture ffmpeg info: ${data}`);
-      });
+      if (this.captureProcess) {
+        this.captureProcess.stderr.on('data', (data: Buffer) => {
+          this.logger.info(LogSource.STREAM, `Capture ffmpeg info: ${data}`);
+        });
+      }
 
       // 파일 생성 이벤트 감지
       const checkAndUploadFiles = async () => {
@@ -260,7 +282,7 @@ export class StreamService {
       // 10초마다 파일 체크 및 업로드
       setInterval(checkAndUploadFiles, 10000);
 
-      return channelDir;
+      return 'Recording started';
     } catch (error) {
       this.logger.error(
         LogSource.STREAM,
