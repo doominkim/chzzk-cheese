@@ -38,3 +38,6 @@ output/*
 
 # envs 폴더 무시
 envs/
+
+# 녹화 파일 무시
+recordings/

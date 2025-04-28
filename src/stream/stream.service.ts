@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { spawn } from 'child_process';
 import { join } from 'path';
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, unlinkSync, statSync } from 'fs';
 import { ChzzkService } from '../chzzk/chzzk.service';
 import { MinioService } from '../minio/minio.service';
 
@@ -9,6 +9,8 @@ import { MinioService } from '../minio/minio.service';
 export class StreamService {
   private readonly logger = new Logger(StreamService.name);
   private readonly outputDir = 'recordings';
+  private readonly maxFileAge = 24 * 60 * 60 * 1000; // 24시간
+  private readonly maxDirSize = 10 * 1024 * 1024 * 1024; // 10GB
   private streamlinkProcess: any;
   private videoProcess: any;
   private audioProcess: any;
@@ -18,19 +20,48 @@ export class StreamService {
     private readonly chzzkService: ChzzkService,
     private readonly minioService: MinioService,
   ) {
-    // 녹화 디렉토리 생성
     if (!existsSync(this.outputDir)) {
       mkdirSync(this.outputDir, { recursive: true });
+    }
+    // 주기적으로 임시 파일 정리
+    setInterval(() => this.cleanupTempFiles(), 60 * 60 * 1000); // 1시간마다
+  }
+
+  private cleanupTempFiles() {
+    try {
+      const now = Date.now();
+      const files = readdirSync(this.outputDir);
+      let totalSize = 0;
+
+      for (const file of files) {
+        const filePath = join(this.outputDir, file);
+        const stats = statSync(filePath);
+        totalSize += stats.size;
+
+        // 파일이 24시간 이상 지났거나 디렉토리 크기가 10GB를 초과하면 삭제
+        if (
+          now - stats.mtimeMs > this.maxFileAge ||
+          totalSize > this.maxDirSize
+        ) {
+          try {
+            unlinkSync(filePath);
+            this.logger.log(`Cleaned up temporary file: ${file}`);
+          } catch (error) {
+            this.logger.error(
+              `Error cleaning up file ${file}: ${error.message}`,
+            );
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Error in cleanupTempFiles: ${error.message}`);
     }
   }
 
   async startRecording(channelId: string): Promise<string> {
     try {
-      // Chzzk 라이브 정보 가져오기
       const live = await this.chzzkService.getChannelLiveDetail(channelId);
-
       const media = live.livePlayback.media;
-      console.log(media);
       const hls = media.find((media) => media.mediaId === 'HLS');
 
       if (!hls) {
@@ -122,22 +153,50 @@ export class StreamService {
         this.logger.error(`Capture ffmpeg error: ${data}`);
       });
 
-      // 오디오 파일이 생성될 때마다 텍스트로 변환하고 MinIO에 업로드
-      this.audioProcess.on('close', async () => {
-        const files = readdirSync(channelDir);
-        const audioFiles = files.filter((file) => file.endsWith('.aac'));
-        const imageFiles = files.filter((file) => file.endsWith('.jpg'));
+      // 파일 생성 이벤트 감지
+      const checkAndUploadFiles = async () => {
+        try {
+          const files = readdirSync(channelDir);
+          const audioFiles = files.filter((file) => file.endsWith('.aac'));
+          const imageFiles = files.filter((file) => file.endsWith('.jpg'));
+          const videoFiles = files.filter((file) => file.endsWith('.mp4'));
 
-        // MinIO에 파일 업로드
-        const {
-          audioFiles: uploadedAudioFiles,
-          imageFiles: uploadedImageFiles,
-        } = await this.minioService.uploadStreamFiles(channelId, channelDir);
+          if (
+            audioFiles.length > 0 ||
+            imageFiles.length > 0 ||
+            videoFiles.length > 0
+          ) {
+            const {
+              audioFiles: uploadedAudioFiles,
+              imageFiles: uploadedImageFiles,
+            } = await this.minioService.uploadStreamFiles(
+              channelId,
+              channelDir,
+            );
 
-        this.logger.log(
-          `Uploaded ${uploadedAudioFiles.length} audio files and ${uploadedImageFiles.length} image files to MinIO`,
-        );
-      });
+            // 업로드된 파일 삭제
+            [...uploadedAudioFiles, ...uploadedImageFiles].forEach((file) => {
+              try {
+                unlinkSync(join(channelDir, file));
+                this.logger.log(`Deleted uploaded file: ${file}`);
+              } catch (error) {
+                this.logger.error(
+                  `Error deleting file ${file}: ${error.message}`,
+                );
+              }
+            });
+
+            this.logger.log(
+              `Uploaded ${uploadedAudioFiles.length} audio files and ${uploadedImageFiles.length} image files to MinIO`,
+            );
+          }
+        } catch (error) {
+          this.logger.error(`Error in checkAndUploadFiles: ${error.message}`);
+        }
+      };
+
+      // 10초마다 파일 체크 및 업로드
+      setInterval(checkAndUploadFiles, 10000);
 
       return channelDir;
     } catch (error) {

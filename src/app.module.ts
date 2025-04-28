@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { BatchModule } from './batch/batch.module';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import * as Joi from 'joi';
@@ -13,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { AccountModule } from './account/account.module';
 import { StreamModule } from './stream/stream.module';
 import { MinioModule } from './minio/minio.module';
+import { LoggerModule } from './logger/logger.module';
 
 const envValidationSchema = Joi.object({
   PORT: Joi.number().required(),
@@ -63,6 +62,7 @@ const serviceModule = [
   AccountModule,
   StreamModule,
   MinioModule,
+  LoggerModule,
 ];
 @Module({
   imports: [...conifgModule, ...serviceModule],
