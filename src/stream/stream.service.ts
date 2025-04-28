@@ -96,23 +96,8 @@ export class StreamService {
         this.isFileComplete(join(channelDir, file)),
       );
 
-      // 100KB 이상인 파일만 필터링
-      const audioFilesToUpload = completedAudioFiles
-        .filter((file) => {
-          const stats = statSync(join(channelDir, file));
-          return stats.size >= 100 * 1024; // 100KB
-        })
-        .slice(0, -1); // 마지막 파일 제외
-
-      const imageFilesToUpload = completedImageFiles
-        .filter((file) => {
-          const stats = statSync(join(channelDir, file));
-          return stats.size >= 100 * 1024; // 100KB
-        })
-        .slice(0, -1); // 마지막 파일 제외
-
       // 오디오 파일 순차 처리
-      for (const file of audioFilesToUpload) {
+      for (const file of completedAudioFiles) {
         try {
           const { audioFiles: uploadedAudioFiles } =
             await this.minioService.uploadStreamFiles(channelId, channelDir, {
@@ -140,7 +125,7 @@ export class StreamService {
       }
 
       // 이미지 파일 순차 처리
-      for (const file of imageFilesToUpload) {
+      for (const file of completedImageFiles) {
         try {
           const { imageFiles: uploadedImageFiles } =
             await this.minioService.uploadStreamFiles(channelId, channelDir, {

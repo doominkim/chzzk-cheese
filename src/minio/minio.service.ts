@@ -93,7 +93,7 @@ export class MinioService {
             file.endsWith('.aac') &&
             (!options?.audioFiles || options.audioFiles.includes(file))
           ) {
-            const objectName = `channels/${channelId}/audio/${file}`;
+            const objectName = `channels/${channelId}/audios/${file}`;
             await this.uploadFile(join(directoryPath, file), objectName);
             audioFiles.push(file);
           } else if (
