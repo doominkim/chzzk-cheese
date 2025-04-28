@@ -10,8 +10,8 @@ export class StreamController {
     return this.streamService.startRecording(channelId);
   }
 
-  @Delete('stop')
-  async stopRecording() {
-    return this.streamService.stopRecording();
+  @Delete('stop/:channelId')
+  async stopRecording(@Param('channelId') channelId: string) {
+    return this.streamService.stopRecording(channelId);
   }
 }
