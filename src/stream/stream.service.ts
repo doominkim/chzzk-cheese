@@ -400,6 +400,7 @@ export class StreamService {
 
       // 오디오 파일 순차 처리
       for (const file of completedAudioFiles) {
+        const filePath = join(channelDir, file);
         try {
           const { audioFiles: uploadedAudioFiles } =
             await this.minioService.uploadStreamFiles(
@@ -412,8 +413,9 @@ export class StreamService {
               },
             );
 
+          await this.saveFileToDB(channelId, liveId, filePath, FileType.AUDIO);
+
           if (uploadedAudioFiles.length > 0) {
-            const filePath = join(channelDir, file);
             if (existsSync(filePath)) {
               unlinkSync(filePath);
               this.logger.log(
@@ -422,13 +424,6 @@ export class StreamService {
                 `Deleted uploaded audio file: ${file}`,
               );
             }
-
-            await this.saveFileToDB(
-              channelId,
-              liveId,
-              filePath,
-              FileType.AUDIO,
-            );
           }
         } catch (error) {
           this.logger.error(
@@ -440,6 +435,8 @@ export class StreamService {
 
       // 이미지 파일 순차 처리
       for (const file of completedImageFiles) {
+        const filePath = join(channelDir, file);
+
         try {
           const { imageFiles: uploadedImageFiles } =
             await this.minioService.uploadStreamFiles(
@@ -452,6 +449,8 @@ export class StreamService {
               },
             );
 
+          await this.saveFileToDB(channelId, liveId, filePath, FileType.IMAGE);
+
           if (uploadedImageFiles.length > 0) {
             const filePath = join(channelDir, file);
             if (existsSync(filePath)) {
@@ -462,13 +461,6 @@ export class StreamService {
                 `Deleted uploaded image file: ${file}`,
               );
             }
-
-            await this.saveFileToDB(
-              channelId,
-              liveId,
-              filePath,
-              FileType.IMAGE,
-            );
           }
         } catch (error) {
           this.logger.error(
@@ -485,11 +477,6 @@ export class StreamService {
     }
   }
 
-  // 날짜 포맷팅 유틸리티 함수
-  private formatDate(date: Date): string {
-    return date.toISOString().replace(/[:.]/g, '-');
-  }
-
   private async saveFileToDB(
     channelId: string,
     liveId: string,
@@ -498,10 +485,11 @@ export class StreamService {
   ) {
     const stat = fs.statSync(filePath);
     const fileName = path.basename(filePath);
+    const minioPath = `channels/${channelId}/lives/${liveId}/${fileName}`;
 
     await this.fileService.createFile({
       ownerId: channelId,
-      filePath,
+      filePath: minioPath,
       fileType,
       originalName: fileName,
       fileSize: stat.size,
