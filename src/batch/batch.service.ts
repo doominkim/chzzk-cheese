@@ -22,6 +22,7 @@ import { ChzzkModule } from 'chzzk-z';
 import { ChannelChatLogService } from 'src/channel/services/channel-chat-log.service';
 import { GenerateChannelChatLogDto } from 'src/channel/dtos/generate-channel-cat-log.dto';
 import { DataSource } from 'typeorm';
+import { StreamService } from 'src/stream/stream.service';
 @Injectable()
 export class BatchService {
   private readonly logger = new Logger(BatchService.name);
@@ -35,6 +36,7 @@ export class BatchService {
     private channelLiveCategoryService: ChannelLiveCategoryService,
     private channelChatLogService: ChannelChatLogService,
     private dataSource: DataSource,
+    private streamService: StreamService,
   ) {
     this.chzzkModules = new Map<string, ChzzkModule>();
   }
@@ -91,6 +93,21 @@ export class BatchService {
           this.chzzkModules.delete(uuid);
         }
       }
+    }
+  }
+
+  @Cron('0 */1 * * * *', {
+    name: 'trackingChannelAudioAndImage',
+  })
+  async trackingChannelAudioAndImage() {
+    const findChannelDto = new FindChannelDto();
+    findChannelDto.openLive = true;
+    findChannelDto.isChatCollected = true;
+    const channels = await this.channelService.findChannels(findChannelDto);
+
+    for (const channel of channels) {
+      const { uuid } = channel;
+      await this.streamService.startRecording(uuid);
     }
   }
 

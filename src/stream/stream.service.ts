@@ -117,8 +117,8 @@ export class StreamService {
 
   private async startAudioCapture(
     channelId: string,
+    liveId: string,
     channelDir: string,
-    timestamp: number,
   ): Promise<void> {
     const processes = this.getChannelProcesses(channelId);
 
@@ -150,7 +150,7 @@ export class StreamService {
       '3',
       '-timestamp',
       'now',
-      join(channelDir, `audio_${timestamp}_%03d.aac`),
+      join(channelDir, liveId, `audio_${this.formatDate(new Date())}_%03d.aac`),
     ]);
 
     processes.streamlink.stdout.pipe(processes.audio.stdin);
@@ -173,8 +173,8 @@ export class StreamService {
 
   private async startImageCapture(
     channelId: string,
+    liveId: string,
     channelDir: string,
-    timestamp: number,
   ): Promise<void> {
     const processes = this.getChannelProcesses(channelId);
 
@@ -194,7 +194,7 @@ export class StreamService {
       'fps=0.1',
       '-timestamp',
       'now',
-      join(channelDir, `capture_${timestamp}_%03d.jpg`),
+      join(channelDir, liveId, `capture_${new Date()}_%03d.jpg`),
     ]);
 
     processes.streamlink.stdout.pipe(processes.capture.stdin);
@@ -247,6 +247,7 @@ export class StreamService {
       }
 
       const live = await this.chzzkService.getChannelLiveDetail(channelId);
+      const liveId = live.liveId.toString();
       const media = live.livePlayback.media;
       const hls = media.find((media) => media.mediaId === 'HLS');
 
@@ -258,25 +259,23 @@ export class StreamService {
       }
 
       const streamUrl = hls.path;
-      const channelDir = join(this.outputDir, channelId);
+      const channelDir = join(this.outputDir, channelId, liveId);
 
       if (!existsSync(channelDir)) {
         mkdirSync(channelDir, { recursive: true });
       }
-
-      const timestamp = Date.now();
 
       // Streamlink 프로세스 시작
       await this.startStreamlink(channelId, streamUrl);
 
       // 오디오 수집이 활성화된 경우
       if (channel.isAudioCollected) {
-        await this.startAudioCapture(channelId, channelDir, timestamp);
+        await this.startAudioCapture(channelId, liveId, channelDir);
       }
 
       // 캡처 수집이 활성화된 경우
       if (channel.isCaptureCollected) {
-        await this.startImageCapture(channelId, channelDir, timestamp);
+        await this.startImageCapture(channelId, liveId, channelDir);
       }
 
       // 파일 생성 이벤트 감지
@@ -453,5 +452,10 @@ export class StreamService {
         `Error in checkAndUploadFiles: ${error.message}`,
       );
     }
+  }
+
+  // 날짜 포맷팅 유틸리티 함수
+  private formatDate(date: Date): string {
+    return date.toISOString().replace(/[:.]/g, '-');
   }
 }
