@@ -1,13 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { spawn } from 'child_process';
 import { join } from 'path';
 import { existsSync, mkdirSync, readdirSync, unlinkSync, statSync } from 'fs';
 import { ChzzkService } from '../chzzk/chzzk.service';
 import { MinioService } from '../minio/minio.service';
+import { LoggerService } from 'src/logger/logger.service';
+import { LogLevel, LogSource } from 'src/logger/logger.entity';
 
 @Injectable()
 export class StreamService {
-  private readonly logger = new Logger(StreamService.name);
   private readonly outputDir = 'recordings';
   private readonly maxFileAge = 24 * 60 * 60 * 1000; // 24시간
   private readonly maxDirSize = 10 * 1024 * 1024 * 1024; // 10GB
@@ -19,6 +20,7 @@ export class StreamService {
   constructor(
     private readonly chzzkService: ChzzkService,
     private readonly minioService: MinioService,
+    private readonly logger: LoggerService,
   ) {
     if (!existsSync(this.outputDir)) {
       mkdirSync(this.outputDir, { recursive: true });
@@ -45,16 +47,24 @@ export class StreamService {
         ) {
           try {
             unlinkSync(filePath);
-            this.logger.log(`Cleaned up temporary file: ${file}`);
+            this.logger.log(
+              LogLevel.INFO,
+              LogSource.STREAM,
+              `Cleaned up temporary file: ${file}`,
+            );
           } catch (error) {
             this.logger.error(
+              LogSource.STREAM,
               `Error cleaning up file ${file}: ${error.message}`,
             );
           }
         }
       }
     } catch (error) {
-      this.logger.error(`Error in cleanupTempFiles: ${error.message}`);
+      this.logger.error(
+        LogSource.STREAM,
+        `Error in cleanupTempFiles: ${error.message}`,
+      );
     }
   }
 
@@ -89,6 +99,7 @@ export class StreamService {
       ]);
 
       // 비디오 세그먼트 프로세스
+      const timestamp = Date.now();
       this.videoProcess = spawn('ffmpeg', [
         '-i',
         '-',
@@ -102,7 +113,7 @@ export class StreamService {
         '10',
         '-reset_timestamps',
         '1',
-        join(channelDir, 'video_%03d.mp4'),
+        join(channelDir, `video_${timestamp}_%03d.mp4`),
       ]);
 
       // 오디오 세그먼트 프로세스
@@ -119,7 +130,7 @@ export class StreamService {
         '10',
         '-reset_timestamps',
         '1',
-        join(channelDir, 'audio_%03d.aac'),
+        join(channelDir, `audio_${timestamp}_%03d.aac`),
       ]);
 
       // 캡처 프로세스
@@ -128,7 +139,7 @@ export class StreamService {
         '-',
         '-vf',
         'fps=0.1',
-        join(channelDir, 'capture_%03d.jpg'),
+        join(channelDir, `capture_${timestamp}_%03d.jpg`),
       ]);
 
       // 파이프 연결
@@ -137,20 +148,55 @@ export class StreamService {
       this.streamlinkProcess.stdout.pipe(this.captureProcess.stdin);
 
       // 에러 핸들링
+      const isRealError = (data: Buffer) => {
+        const msg = data.toString().toLowerCase();
+        return (
+          msg.includes('error') || msg.includes('fail') || msg.includes('fatal')
+        );
+      };
+
       this.streamlinkProcess.stderr.on('data', (data: Buffer) => {
-        this.logger.error(`Streamlink error: ${data}`);
+        if (isRealError(data)) {
+          this.logger.error(
+            LogSource.STREAM,
+            `Streamlink error: ${data}`,
+            {},
+            new Error(data.toString()),
+          );
+        }
       });
 
       this.videoProcess.stderr.on('data', (data: Buffer) => {
-        this.logger.error(`Video ffmpeg error: ${data}`);
+        if (isRealError(data)) {
+          this.logger.error(
+            LogSource.STREAM,
+            `Video ffmpeg error: ${data}`,
+            {},
+            new Error(data.toString()),
+          );
+        }
       });
 
       this.audioProcess.stderr.on('data', (data: Buffer) => {
-        this.logger.error(`Audio ffmpeg error: ${data}`);
+        if (isRealError(data)) {
+          this.logger.error(
+            LogSource.STREAM,
+            `Audio ffmpeg error: ${data}`,
+            {},
+            new Error(data.toString()),
+          );
+        }
       });
 
       this.captureProcess.stderr.on('data', (data: Buffer) => {
-        this.logger.error(`Capture ffmpeg error: ${data}`);
+        if (isRealError(data)) {
+          this.logger.error(
+            LogSource.STREAM,
+            `Capture ffmpeg error: ${data}`,
+            {},
+            new Error(data.toString()),
+          );
+        }
       });
 
       // 파일 생성 이벤트 감지
@@ -176,22 +222,33 @@ export class StreamService {
 
             // 업로드된 파일 삭제
             [...uploadedAudioFiles, ...uploadedImageFiles].forEach((file) => {
-              try {
-                unlinkSync(join(channelDir, file));
-                this.logger.log(`Deleted uploaded file: ${file}`);
-              } catch (error) {
-                this.logger.error(
-                  `Error deleting file ${file}: ${error.message}`,
+              const filePath = join(channelDir, file);
+              if (existsSync(filePath)) {
+                unlinkSync(filePath);
+                this.logger.log(
+                  LogLevel.INFO,
+                  LogSource.STREAM,
+                  `Deleted uploaded file: ${file}`,
+                );
+              } else {
+                this.logger.warn(
+                  LogSource.STREAM,
+                  `File not found for deletion: ${file}`,
                 );
               }
             });
 
             this.logger.log(
+              LogLevel.INFO,
+              LogSource.STREAM,
               `Uploaded ${uploadedAudioFiles.length} audio files and ${uploadedImageFiles.length} image files to MinIO`,
             );
           }
         } catch (error) {
-          this.logger.error(`Error in checkAndUploadFiles: ${error.message}`);
+          this.logger.error(
+            LogSource.STREAM,
+            `Error in checkAndUploadFiles: ${error.message}`,
+          );
         }
       };
 
@@ -200,7 +257,10 @@ export class StreamService {
 
       return channelDir;
     } catch (error) {
-      this.logger.error(`Error starting recording: ${error.message}`);
+      this.logger.error(
+        LogSource.STREAM,
+        `Error starting recording: ${error.message}`,
+      );
       throw error;
     }
   }
@@ -212,7 +272,10 @@ export class StreamService {
       this.audioProcess?.kill();
       this.captureProcess?.kill();
     } catch (error) {
-      this.logger.error(`Error stopping recording: ${error.message}`);
+      this.logger.error(
+        LogSource.STREAM,
+        `Error stopping recording: ${error.message}`,
+      );
       throw error;
     }
   }
