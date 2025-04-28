@@ -80,4 +80,37 @@ export class Channel extends CoreSoftEntity {
   @IsOptional()
   @IsBoolean()
   isChatCollected: boolean;
+
+  @Type(() => Boolean)
+  @Transform(({ value }) => Boolean(value))
+  @ApiProperty({
+    required: false,
+    type: Boolean,
+  })
+  @Column({ type: 'boolean', nullable: false, default: false })
+  @IsOptional()
+  @IsBoolean()
+  isAudioCollected: boolean;
+
+  @Type(() => Boolean)
+  @Transform(({ value }) => Boolean(value))
+  @ApiProperty({
+    required: false,
+    type: Boolean,
+  })
+  @Column({ type: 'boolean', nullable: false, default: false })
+  @IsOptional()
+  @IsBoolean()
+  isCaptureCollected: boolean;
+
+  @Type(() => Boolean)
+  @Transform(({ value }) => Boolean(value))
+  @ApiProperty({
+    required: false,
+    type: Boolean,
+  })
+  @Column({ type: 'boolean', nullable: false, default: false })
+  @IsOptional()
+  @IsBoolean()
+  isEnabledAi: boolean;
 }
