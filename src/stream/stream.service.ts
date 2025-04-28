@@ -485,7 +485,8 @@ export class StreamService {
   ) {
     const stat = fs.statSync(filePath);
     const fileName = path.basename(filePath);
-    const minioPath = `channels/${channelId}/lives/${liveId}/${fileName}`;
+    const typeDir = fileType === FileType.AUDIO ? 'audios' : 'images';
+    const minioPath = `${process.env.MINIO_BUCKET}/channels/${channelId}/lives/${liveId}/${typeDir}/${fileName}`;
 
     await this.fileService.createFile({
       ownerId: channelId,

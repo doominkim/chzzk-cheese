@@ -94,14 +94,14 @@ export class MinioService {
             file.endsWith('.aac') &&
             (!options?.audioFiles || options.audioFiles.includes(file))
           ) {
-            const objectName = `channels/${channelId}/live/${liveId}/audios/${file}`;
+            const objectName = `channels/${channelId}/lives/${liveId}/audios/${file}`;
             await this.uploadFile(join(directoryPath, file), objectName);
             audioFiles.push(file);
           } else if (
             file.endsWith('.jpg') &&
             (!options?.imageFiles || options.imageFiles.includes(file))
           ) {
-            const objectName = `channels/${channelId}/live/${liveId}/images/${file}`;
+            const objectName = `channels/${channelId}/lives/${liveId}/images/${file}`;
             await this.uploadFile(join(directoryPath, file), objectName);
             imageFiles.push(file);
           }
