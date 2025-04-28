@@ -68,6 +68,16 @@ export class StreamService {
     }
   }
 
+  private isFileComplete(filePath: string): boolean {
+    try {
+      const stats = statSync(filePath);
+      // 파일이 1초 이상 수정되지 않았다면 완성된 것으로 간주
+      return Date.now() - stats.mtimeMs > 1000;
+    } catch (error) {
+      return false;
+    }
+  }
+
   async startRecording(channelId: string): Promise<string> {
     try {
       const live = await this.chzzkService.getChannelLiveDetail(channelId);
@@ -98,23 +108,7 @@ export class StreamService {
         'best',
       ]);
 
-      // 비디오 세그먼트 프로세스
       const timestamp = Date.now();
-      this.videoProcess = spawn('ffmpeg', [
-        '-i',
-        '-',
-        '-map',
-        '0:v',
-        '-c:v',
-        'copy',
-        '-f',
-        'segment',
-        '-segment_time',
-        '10',
-        '-reset_timestamps',
-        '1',
-        join(channelDir, `video_${timestamp}_%03d.mp4`),
-      ]);
 
       // 오디오 세그먼트 프로세스
       this.audioProcess = spawn('ffmpeg', [
@@ -130,6 +124,12 @@ export class StreamService {
         '10',
         '-reset_timestamps',
         '1',
+        '-movflags',
+        '+faststart',
+        '-write_xing',
+        '1',
+        '-id3v2_version',
+        '3',
         join(channelDir, `audio_${timestamp}_%03d.aac`),
       ]);
 
@@ -137,66 +137,42 @@ export class StreamService {
       this.captureProcess = spawn('ffmpeg', [
         '-i',
         '-',
+        '-f',
+        'image2',
         '-vf',
         'fps=0.1',
         join(channelDir, `capture_${timestamp}_%03d.jpg`),
       ]);
 
       // 파이프 연결
-      this.streamlinkProcess.stdout.pipe(this.videoProcess.stdin);
       this.streamlinkProcess.stdout.pipe(this.audioProcess.stdin);
       this.streamlinkProcess.stdout.pipe(this.captureProcess.stdin);
 
-      // 에러 핸들링
-      const isRealError = (data: Buffer) => {
-        const msg = data.toString().toLowerCase();
-        return (
-          msg.includes('error') || msg.includes('fail') || msg.includes('fatal')
-        );
-      };
-
       this.streamlinkProcess.stderr.on('data', (data: Buffer) => {
-        if (isRealError(data)) {
-          this.logger.error(
-            LogSource.STREAM,
-            `Streamlink error: ${data}`,
-            {},
-            new Error(data.toString()),
-          );
-        }
-      });
-
-      this.videoProcess.stderr.on('data', (data: Buffer) => {
-        if (isRealError(data)) {
-          this.logger.error(
-            LogSource.STREAM,
-            `Video ffmpeg error: ${data}`,
-            {},
-            new Error(data.toString()),
-          );
-        }
+        this.logger.error(
+          LogSource.STREAM,
+          `Streamlink error: ${data}`,
+          {},
+          new Error(data.toString()),
+        );
       });
 
       this.audioProcess.stderr.on('data', (data: Buffer) => {
-        if (isRealError(data)) {
-          this.logger.error(
-            LogSource.STREAM,
-            `Audio ffmpeg error: ${data}`,
-            {},
-            new Error(data.toString()),
-          );
-        }
+        this.logger.error(
+          LogSource.STREAM,
+          `Audio ffmpeg error: ${data}`,
+          {},
+          new Error(data.toString()),
+        );
       });
 
       this.captureProcess.stderr.on('data', (data: Buffer) => {
-        if (isRealError(data)) {
-          this.logger.error(
-            LogSource.STREAM,
-            `Capture ffmpeg error: ${data}`,
-            {},
-            new Error(data.toString()),
-          );
-        }
+        this.logger.error(
+          LogSource.STREAM,
+          `Capture ffmpeg error: ${data}`,
+          {},
+          new Error(data.toString()),
+        );
       });
 
       // 파일 생성 이벤트 감지
@@ -205,12 +181,18 @@ export class StreamService {
           const files = readdirSync(channelDir);
           const audioFiles = files.filter((file) => file.endsWith('.aac'));
           const imageFiles = files.filter((file) => file.endsWith('.jpg'));
-          const videoFiles = files.filter((file) => file.endsWith('.mp4'));
+
+          // 완성된 파일만 필터링
+          const completedAudioFiles = audioFiles.filter((file) =>
+            this.isFileComplete(join(channelDir, file)),
+          );
+          const completedImageFiles = imageFiles.filter((file) =>
+            this.isFileComplete(join(channelDir, file)),
+          );
 
           if (
-            audioFiles.length > 0 ||
-            imageFiles.length > 0 ||
-            videoFiles.length > 0
+            completedAudioFiles.length > 0 ||
+            completedImageFiles.length > 0
           ) {
             const {
               audioFiles: uploadedAudioFiles,

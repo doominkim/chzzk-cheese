@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { ConfigService } from '@nestjs/config';
 import { join } from 'path';
-import { readdirSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 
 @Injectable()
 export class MinioService {
@@ -27,10 +27,17 @@ export class MinioService {
 
   async uploadFile(filePath: string, objectName: string): Promise<string> {
     try {
+      const fileContent = readFileSync(filePath);
+
       const command = new PutObjectCommand({
         Bucket: this.bucketName,
         Key: objectName,
-        Body: filePath,
+        Body: fileContent,
+        ContentType: objectName.endsWith('.aac')
+          ? 'audio/aac'
+          : objectName.endsWith('.jpg')
+          ? 'image/jpeg'
+          : 'application/octet-stream',
       });
 
       await this.client.send(command);
