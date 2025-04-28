@@ -149,7 +149,7 @@ export class StreamService {
       '3',
       '-timestamp',
       'now',
-      join(channelDir, `audio_${this.formatDate(new Date())}_%03d.aac`),
+      join(channelDir, `audio_${Date.now()}_%03d.aac`),
     ]);
 
     processes.streamlink.stdout.pipe(processes.audio.stdin);
@@ -192,7 +192,7 @@ export class StreamService {
       'fps=0.1',
       '-timestamp',
       'now',
-      join(channelDir, `capture_${new Date()}_%03d.jpg`),
+      join(channelDir, `capture_${Date.now()}_%03d.jpg`),
     ]);
 
     processes.streamlink.stdout.pipe(processes.capture.stdin);
