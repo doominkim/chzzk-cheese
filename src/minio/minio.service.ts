@@ -73,6 +73,7 @@ export class MinioService {
 
   async uploadStreamFiles(
     channelId: string,
+    liveId: string,
     directoryPath: string,
     options?: {
       audioFiles?: string[];
@@ -93,14 +94,14 @@ export class MinioService {
             file.endsWith('.aac') &&
             (!options?.audioFiles || options.audioFiles.includes(file))
           ) {
-            const objectName = `channels/${channelId}/audios/${file}`;
+            const objectName = `channels/${channelId}/live/${liveId}/audios/${file}`;
             await this.uploadFile(join(directoryPath, file), objectName);
             audioFiles.push(file);
           } else if (
             file.endsWith('.jpg') &&
             (!options?.imageFiles || options.imageFiles.includes(file))
           ) {
-            const objectName = `channels/${channelId}/images/${file}`;
+            const objectName = `channels/${channelId}/live/${liveId}/images/${file}`;
             await this.uploadFile(join(directoryPath, file), objectName);
             imageFiles.push(file);
           }

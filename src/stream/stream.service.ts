@@ -117,7 +117,6 @@ export class StreamService {
 
   private async startAudioCapture(
     channelId: string,
-    liveId: string,
     channelDir: string,
   ): Promise<void> {
     const processes = this.getChannelProcesses(channelId);
@@ -150,7 +149,7 @@ export class StreamService {
       '3',
       '-timestamp',
       'now',
-      join(channelDir, liveId, `audio_${this.formatDate(new Date())}_%03d.aac`),
+      join(channelDir, `audio_${this.formatDate(new Date())}_%03d.aac`),
     ]);
 
     processes.streamlink.stdout.pipe(processes.audio.stdin);
@@ -173,7 +172,6 @@ export class StreamService {
 
   private async startImageCapture(
     channelId: string,
-    liveId: string,
     channelDir: string,
   ): Promise<void> {
     const processes = this.getChannelProcesses(channelId);
@@ -194,7 +192,7 @@ export class StreamService {
       'fps=0.1',
       '-timestamp',
       'now',
-      join(channelDir, liveId, `capture_${new Date()}_%03d.jpg`),
+      join(channelDir, `capture_${new Date()}_%03d.jpg`),
     ]);
 
     processes.streamlink.stdout.pipe(processes.capture.stdin);
@@ -233,6 +231,8 @@ export class StreamService {
       }
 
       if (!channel.openLive) {
+        await this.stopRecording(channelId);
+
         throw new StreamError(
           this.ERROR_MESSAGES.CHANNEL_NOT_LIVE,
           this.ERROR_CODES.CHANNEL_NOT_LIVE,
@@ -270,18 +270,18 @@ export class StreamService {
 
       // 오디오 수집이 활성화된 경우
       if (channel.isAudioCollected) {
-        await this.startAudioCapture(channelId, liveId, channelDir);
+        await this.startAudioCapture(channelId, channelDir);
       }
 
       // 캡처 수집이 활성화된 경우
       if (channel.isCaptureCollected) {
-        await this.startImageCapture(channelId, liveId, channelDir);
+        await this.startImageCapture(channelId, channelDir);
       }
 
       // 파일 생성 이벤트 감지
       const checkAndUploadFiles = async () => {
         try {
-          await this.checkAndUploadFiles(channelId, channelDir);
+          await this.checkAndUploadFiles(channelId, liveId, channelDir);
         } catch (error) {
           this.logger.error(
             LogSource.STREAM,
@@ -305,6 +305,10 @@ export class StreamService {
 
   async stopRecording(channelId: string): Promise<void> {
     const processes = this.getChannelProcesses(channelId);
+
+    if (!processes) {
+      return;
+    }
 
     if (processes.capture) {
       processes.capture.kill();
@@ -377,7 +381,11 @@ export class StreamService {
     }
   }
 
-  private async checkAndUploadFiles(channelId: string, channelDir: string) {
+  private async checkAndUploadFiles(
+    channelId: string,
+    liveId: string,
+    channelDir: string,
+  ) {
     try {
       const files = readdirSync(channelDir);
       const audioFiles = files.filter((file) => file.endsWith('.aac'));
@@ -395,10 +403,15 @@ export class StreamService {
       for (const file of completedAudioFiles) {
         try {
           const { audioFiles: uploadedAudioFiles } =
-            await this.minioService.uploadStreamFiles(channelId, channelDir, {
-              audioFiles: [file],
-              imageFiles: [],
-            });
+            await this.minioService.uploadStreamFiles(
+              channelId,
+              liveId,
+              channelDir,
+              {
+                audioFiles: [file],
+                imageFiles: [],
+              },
+            );
 
           if (uploadedAudioFiles.length > 0) {
             const filePath = join(channelDir, file);
@@ -423,10 +436,15 @@ export class StreamService {
       for (const file of completedImageFiles) {
         try {
           const { imageFiles: uploadedImageFiles } =
-            await this.minioService.uploadStreamFiles(channelId, channelDir, {
-              audioFiles: [],
-              imageFiles: [file],
-            });
+            await this.minioService.uploadStreamFiles(
+              channelId,
+              liveId,
+              channelDir,
+              {
+                audioFiles: [],
+                imageFiles: [file],
+              },
+            );
 
           if (uploadedImageFiles.length > 0) {
             const filePath = join(channelDir, file);
