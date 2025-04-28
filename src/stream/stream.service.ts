@@ -1,4 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
+import { Injectable, Logger } from '@nestjs/common';
 import { spawn, ChildProcess } from 'child_process';
 import { join } from 'path';
 import { existsSync, mkdirSync, readdirSync, unlinkSync, statSync } from 'fs';
@@ -7,18 +9,14 @@ import { MinioService } from '../minio/minio.service';
 import { LoggerService } from 'src/logger/logger.service';
 import { LogLevel, LogSource } from 'src/logger/logger.entity';
 import { ChannelService } from 'src/channel/services/channel.service';
+import { FileService } from '../file-system/services/file.service';
+import { FileType } from '../file-system/types';
+import { StreamError } from './stream.error';
 
 interface ChannelProcesses {
   streamlink: ChildProcess | null;
   audio: ChildProcess | null;
   capture: ChildProcess | null;
-}
-
-export class StreamError extends Error {
-  constructor(message: string, public readonly code: string) {
-    super(message);
-    this.name = 'StreamError';
-  }
 }
 
 @Injectable()
@@ -55,6 +53,7 @@ export class StreamService {
     private readonly minioService: MinioService,
     private readonly logger: LoggerService,
     private readonly channelService: ChannelService,
+    private readonly fileService: FileService,
   ) {
     if (!existsSync(this.outputDir)) {
       mkdirSync(this.outputDir, { recursive: true });
@@ -423,6 +422,13 @@ export class StreamService {
                 `Deleted uploaded audio file: ${file}`,
               );
             }
+
+            await this.saveFileToDB(
+              channelId,
+              liveId,
+              filePath,
+              FileType.AUDIO,
+            );
           }
         } catch (error) {
           this.logger.error(
@@ -456,6 +462,13 @@ export class StreamService {
                 `Deleted uploaded image file: ${file}`,
               );
             }
+
+            await this.saveFileToDB(
+              channelId,
+              liveId,
+              filePath,
+              FileType.IMAGE,
+            );
           }
         } catch (error) {
           this.logger.error(
@@ -475,5 +488,31 @@ export class StreamService {
   // 날짜 포맷팅 유틸리티 함수
   private formatDate(date: Date): string {
     return date.toISOString().replace(/[:.]/g, '-');
+  }
+
+  private async saveFileToDB(
+    channelId: string,
+    liveId: string,
+    filePath: string,
+    fileType: FileType,
+  ) {
+    const stat = fs.statSync(filePath);
+    const fileName = path.basename(filePath);
+
+    await this.fileService.createFile({
+      ownerId: channelId,
+      filePath,
+      fileType,
+      originalName: fileName,
+      fileSize: stat.size,
+      mimeType: fileType === FileType.AUDIO ? 'audio/aac' : 'image/jpeg',
+      isPublic: true,
+      metadata: {
+        liveId,
+        channelId,
+        fileName,
+        createdAt: new Date(),
+      },
+    });
   }
 }

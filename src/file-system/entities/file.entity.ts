@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { FileType, FileMetadata } from '../types';
 
-@Entity('files')
+@Entity({ name: 'files', schema: process.env.DB_SCHEMA_NAME })
 @Index(['ownerId', 'filePath'], { unique: true })
 export class FileEntity {
   @PrimaryGeneratedColumn()
