@@ -209,63 +209,17 @@ export class StreamService {
 
       // 오디오 수집이 활성화된 경우
       if (channel.isAudioCollected) {
-        this.audioProcess = spawn('ffmpeg', [
-          '-i',
-          '-',
-          '-map',
-          '0:a',
-          '-c:a',
-          'copy',
-          '-f',
-          'segment',
-          '-segment_time',
-          '10',
-          '-reset_timestamps',
-          '1',
-          '-movflags',
-          '+faststart',
-          '-write_xing',
-          '1',
-          '-id3v2_version',
-          '3',
-          '-timestamp',
-          'now',
-          join(channelDir, `audio_${timestamp}_%03d.aac`),
-        ]);
-        this.streamlinkProcess.stdout.pipe(this.audioProcess.stdin);
+        this.startAudioCapture(channelDir, timestamp);
       }
 
       // 캡처 수집이 활성화된 경우
       if (channel.isCaptureCollected) {
-        this.captureProcess = spawn('ffmpeg', [
-          '-i',
-          '-',
-          '-f',
-          'image2',
-          '-vf',
-          'fps=0.1',
-          '-timestamp',
-          'now',
-          join(channelDir, `capture_${timestamp}_%03d.jpg`),
-        ]);
-        this.streamlinkProcess.stdout.pipe(this.captureProcess.stdin);
+        this.startImageCapture(channelDir, timestamp);
       }
 
       this.streamlinkProcess.stderr.on('data', (data: Buffer) => {
         this.logger.info(LogSource.STREAM, `Streamlink info: ${data}`);
       });
-
-      if (this.audioProcess) {
-        this.audioProcess.stderr.on('data', (data: Buffer) => {
-          this.logger.info(LogSource.STREAM, `Audio ffmpeg info: ${data}`);
-        });
-      }
-
-      if (this.captureProcess) {
-        this.captureProcess.stderr.on('data', (data: Buffer) => {
-          this.logger.info(LogSource.STREAM, `Capture ffmpeg info: ${data}`);
-        });
-      }
 
       // 파일 생성 이벤트 감지
       const checkAndUploadFiles = async () => {
@@ -305,5 +259,53 @@ export class StreamService {
       );
       throw error;
     }
+  }
+
+  async startAudioCapture(channelDir: string, timestamp: number) {
+    this.audioProcess = spawn('ffmpeg', [
+      '-i',
+      '-',
+      '-map',
+      '0:a',
+      '-c:a',
+      'copy',
+      '-f',
+      'segment',
+      '-segment_time',
+      '10',
+      '-reset_timestamps',
+      '1',
+      '-movflags',
+      '+faststart',
+      '-write_xing',
+      '1',
+      '-id3v2_version',
+      '3',
+      '-timestamp',
+      'now',
+      join(channelDir, `audio_${timestamp}_%03d.aac`),
+    ]);
+    this.streamlinkProcess.stdout.pipe(this.audioProcess.stdin);
+    this.audioProcess.stderr.on('data', (data: Buffer) => {
+      this.logger.info(LogSource.STREAM, `Audio ffmpeg info: ${data}`);
+    });
+  }
+
+  async startImageCapture(channelDir: string, timestamp: number) {
+    this.captureProcess = spawn('ffmpeg', [
+      '-i',
+      '-',
+      '-f',
+      'image2',
+      '-vf',
+      'fps=0.1',
+      '-timestamp',
+      'now',
+      join(channelDir, `capture_${timestamp}_%03d.jpg`),
+    ]);
+    this.streamlinkProcess.stdout.pipe(this.captureProcess.stdin);
+    this.captureProcess.stderr.on('data', (data: Buffer) => {
+      this.logger.info(LogSource.STREAM, `Capture ffmpeg info: ${data}`);
+    });
   }
 }
