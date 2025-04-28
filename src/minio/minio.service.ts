@@ -41,6 +41,7 @@ export class MinioService {
       });
 
       await this.client.send(command);
+      this.logger.debug(`Successfully uploaded ${objectName} to MinIO`);
       return objectName;
     } catch (error) {
       this.logger.error(`Error uploading file ${filePath}: ${error.message}`);
@@ -73,6 +74,10 @@ export class MinioService {
   async uploadStreamFiles(
     channelId: string,
     directoryPath: string,
+    options?: {
+      audioFiles?: string[];
+      imageFiles?: string[];
+    },
   ): Promise<{
     audioFiles: string[];
     imageFiles: string[];
@@ -83,14 +88,25 @@ export class MinioService {
       const imageFiles: string[] = [];
 
       for (const file of files) {
-        if (file.endsWith('.aac')) {
-          const objectName = `channels/${channelId}/audio/${file}`;
-          await this.uploadFile(join(directoryPath, file), objectName);
-          audioFiles.push(objectName);
-        } else if (file.endsWith('.jpg')) {
-          const objectName = `channels/${channelId}/images/${file}`;
-          await this.uploadFile(join(directoryPath, file), objectName);
-          imageFiles.push(objectName);
+        try {
+          if (
+            file.endsWith('.aac') &&
+            (!options?.audioFiles || options.audioFiles.includes(file))
+          ) {
+            const objectName = `channels/${channelId}/audio/${file}`;
+            await this.uploadFile(join(directoryPath, file), objectName);
+            audioFiles.push(file);
+          } else if (
+            file.endsWith('.jpg') &&
+            (!options?.imageFiles || options.imageFiles.includes(file))
+          ) {
+            const objectName = `channels/${channelId}/images/${file}`;
+            await this.uploadFile(join(directoryPath, file), objectName);
+            imageFiles.push(file);
+          }
+        } catch (error) {
+          this.logger.error(`Error processing file ${file}: ${error.message}`);
+          continue;
         }
       }
 

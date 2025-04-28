@@ -71,10 +71,106 @@ export class StreamService {
   private isFileComplete(filePath: string): boolean {
     try {
       const stats = statSync(filePath);
-      // 파일이 1초 이상 수정되지 않았다면 완성된 것으로 간주
-      return Date.now() - stats.mtimeMs > 1000;
+      const now = Date.now();
+
+      // 파일 크기가 0보다 크고
+      // 10초 이상 크기가 변하지 않았고 (더 긴 시간으로 설정)
+      // 10초 이상 수정되지 않았다면 완성된 것으로 간주
+      return stats.size > 0 && now - stats.ctimeMs > 10000;
     } catch (error) {
       return false;
+    }
+  }
+
+  private async checkAndUploadFiles(channelId: string, channelDir: string) {
+    try {
+      const files = readdirSync(channelDir);
+      const audioFiles = files.filter((file) => file.endsWith('.aac'));
+      const imageFiles = files.filter((file) => file.endsWith('.jpg'));
+
+      // 완성된 파일만 필터링
+      const completedAudioFiles = audioFiles.filter((file) =>
+        this.isFileComplete(join(channelDir, file)),
+      );
+      const completedImageFiles = imageFiles.filter((file) =>
+        this.isFileComplete(join(channelDir, file)),
+      );
+
+      // 100KB 이상인 파일만 필터링
+      const audioFilesToUpload = completedAudioFiles
+        .filter((file) => {
+          const stats = statSync(join(channelDir, file));
+          return stats.size >= 100 * 1024; // 100KB
+        })
+        .slice(0, -1); // 마지막 파일 제외
+
+      const imageFilesToUpload = completedImageFiles
+        .filter((file) => {
+          const stats = statSync(join(channelDir, file));
+          return stats.size >= 100 * 1024; // 100KB
+        })
+        .slice(0, -1); // 마지막 파일 제외
+
+      // 오디오 파일 순차 처리
+      for (const file of audioFilesToUpload) {
+        try {
+          const { audioFiles: uploadedAudioFiles } =
+            await this.minioService.uploadStreamFiles(channelId, channelDir, {
+              audioFiles: [file],
+              imageFiles: [],
+            });
+
+          if (uploadedAudioFiles.length > 0) {
+            const filePath = join(channelDir, file);
+            if (existsSync(filePath)) {
+              unlinkSync(filePath);
+              this.logger.log(
+                LogLevel.INFO,
+                LogSource.STREAM,
+                `Deleted uploaded audio file: ${file}`,
+              );
+            }
+          }
+        } catch (error) {
+          this.logger.error(
+            LogSource.STREAM,
+            `Error processing audio file ${file}: ${error.message}`,
+          );
+        }
+      }
+
+      // 이미지 파일 순차 처리
+      for (const file of imageFilesToUpload) {
+        try {
+          const { imageFiles: uploadedImageFiles } =
+            await this.minioService.uploadStreamFiles(channelId, channelDir, {
+              audioFiles: [],
+              imageFiles: [file],
+            });
+
+          if (uploadedImageFiles.length > 0) {
+            const filePath = join(channelDir, file);
+            if (existsSync(filePath)) {
+              unlinkSync(filePath);
+              this.logger.log(
+                LogLevel.INFO,
+                LogSource.STREAM,
+                `Deleted uploaded image file: ${file}`,
+              );
+            }
+          }
+        } catch (error) {
+          this.logger.error(
+            LogSource.STREAM,
+            `Error processing image file ${file}: ${error.message}`,
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        LogSource.STREAM,
+        `Error in checkAndUploadFiles: ${error.message}`,
+      );
     }
   }
 
@@ -130,6 +226,8 @@ export class StreamService {
         '1',
         '-id3v2_version',
         '3',
+        '-timestamp',
+        'now',
         join(channelDir, `audio_${timestamp}_%03d.aac`),
       ]);
 
@@ -141,6 +239,8 @@ export class StreamService {
         'image2',
         '-vf',
         'fps=0.1',
+        '-timestamp',
+        'now',
         join(channelDir, `capture_${timestamp}_%03d.jpg`),
       ]);
 
@@ -149,83 +249,21 @@ export class StreamService {
       this.streamlinkProcess.stdout.pipe(this.captureProcess.stdin);
 
       this.streamlinkProcess.stderr.on('data', (data: Buffer) => {
-        this.logger.error(
-          LogSource.STREAM,
-          `Streamlink error: ${data}`,
-          {},
-          new Error(data.toString()),
-        );
+        this.logger.info(LogSource.STREAM, `Streamlink info: ${data}`);
       });
 
       this.audioProcess.stderr.on('data', (data: Buffer) => {
-        this.logger.error(
-          LogSource.STREAM,
-          `Audio ffmpeg error: ${data}`,
-          {},
-          new Error(data.toString()),
-        );
+        this.logger.info(LogSource.STREAM, `Audio ffmpeg info: ${data}`);
       });
 
       this.captureProcess.stderr.on('data', (data: Buffer) => {
-        this.logger.error(
-          LogSource.STREAM,
-          `Capture ffmpeg error: ${data}`,
-          {},
-          new Error(data.toString()),
-        );
+        this.logger.info(LogSource.STREAM, `Capture ffmpeg info: ${data}`);
       });
 
       // 파일 생성 이벤트 감지
       const checkAndUploadFiles = async () => {
         try {
-          const files = readdirSync(channelDir);
-          const audioFiles = files.filter((file) => file.endsWith('.aac'));
-          const imageFiles = files.filter((file) => file.endsWith('.jpg'));
-
-          // 완성된 파일만 필터링
-          const completedAudioFiles = audioFiles.filter((file) =>
-            this.isFileComplete(join(channelDir, file)),
-          );
-          const completedImageFiles = imageFiles.filter((file) =>
-            this.isFileComplete(join(channelDir, file)),
-          );
-
-          if (
-            completedAudioFiles.length > 0 ||
-            completedImageFiles.length > 0
-          ) {
-            const {
-              audioFiles: uploadedAudioFiles,
-              imageFiles: uploadedImageFiles,
-            } = await this.minioService.uploadStreamFiles(
-              channelId,
-              channelDir,
-            );
-
-            // 업로드된 파일 삭제
-            [...uploadedAudioFiles, ...uploadedImageFiles].forEach((file) => {
-              const filePath = join(channelDir, file);
-              if (existsSync(filePath)) {
-                unlinkSync(filePath);
-                this.logger.log(
-                  LogLevel.INFO,
-                  LogSource.STREAM,
-                  `Deleted uploaded file: ${file}`,
-                );
-              } else {
-                this.logger.warn(
-                  LogSource.STREAM,
-                  `File not found for deletion: ${file}`,
-                );
-              }
-            });
-
-            this.logger.log(
-              LogLevel.INFO,
-              LogSource.STREAM,
-              `Uploaded ${uploadedAudioFiles.length} audio files and ${uploadedImageFiles.length} image files to MinIO`,
-            );
-          }
+          await this.checkAndUploadFiles(channelId, channelDir);
         } catch (error) {
           this.logger.error(
             LogSource.STREAM,
