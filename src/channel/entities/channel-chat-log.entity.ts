@@ -72,11 +72,17 @@ export class ChannelChatLog extends CoreHardEntity {
     const toMonth = month === 12 ? 1 : month + 1;
     const toYear = month === 12 ? year + 1 : year;
     const to = `${toYear}-${String(toMonth).padStart(2, '0')}-01`;
+    const partitionName = `channelChatLog_${year}_${String(month).padStart(
+      2,
+      '0',
+    )}`;
     return `
-      CREATE TABLE IF NOT EXISTS "channelChatLog_${year}_${String(
-      month,
-    ).padStart(2, '0')}" PARTITION OF "channelChatLog"
+      CREATE TABLE IF NOT EXISTS "${partitionName}" PARTITION OF "channelChatLog"
       FOR VALUES FROM ('${from}') TO ('${to}');
+      CREATE INDEX IF NOT EXISTS idx_${partitionName}_channelId ON "${partitionName}" ("channelId");
+      CREATE INDEX IF NOT EXISTS idx_${partitionName}_chatChannelId ON "${partitionName}" ("chatChannelId");
+      CREATE INDEX IF NOT EXISTS idx_${partitionName}_userIdHash ON "${partitionName}" ("userIdHash");
+      CREATE INDEX IF NOT EXISTS idx_${partitionName}_nickname ON "${partitionName}" ("nickname");
     `;
   }
 }

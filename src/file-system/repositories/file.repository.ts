@@ -1,6 +1,5 @@
-import { Repository, Between } from 'typeorm';
-import { FileEntity } from '../entities/file.entity';
-import { FileType } from '../types';
+import { Repository } from 'typeorm';
+import { File } from '../entities/file.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateFileDto } from '../dto/create-file.dto';
@@ -8,11 +7,11 @@ import { CreateFileDto } from '../dto/create-file.dto';
 @Injectable()
 export class FileRepository {
   constructor(
-    @InjectRepository(FileEntity)
-    private repository: Repository<FileEntity>,
+    @InjectRepository(File)
+    private repository: Repository<File>,
   ) {}
 
-  async createFile(file: CreateFileDto): Promise<FileEntity> {
+  async createFile(file: CreateFileDto): Promise<File> {
     const instance = this.repository.create(file);
     return this.repository.save(instance);
   }

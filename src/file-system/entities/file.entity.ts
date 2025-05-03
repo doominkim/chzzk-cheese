@@ -7,10 +7,14 @@ import {
   Index,
 } from 'typeorm';
 import { FileType, FileMetadata } from '../types';
+import { CoreHardEntity } from 'src/common/entities/core-hard.entity';
 
-@Entity({ name: 'files', schema: process.env.DB_SCHEMA_NAME })
-@Index(['ownerId', 'filePath'], { unique: true })
-export class FileEntity {
+@Entity({
+  name: 'file',
+  schema: process.env.DB_SCHEMA_NAME,
+  synchronize: false,
+})
+export class File extends CoreHardEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -47,4 +51,43 @@ export class FileEntity {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  static createPartitionedTable() {
+    return `
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_tables WHERE tablename = 'file'
+        ) THEN
+        CREATE TABLE "file" (
+        id SERIAL,
+        "ownerId" VARCHAR NOT NULL,
+        "filePath" VARCHAR NOT NULL,
+        "fileType" VARCHAR NOT NULL,
+        "originalName" VARCHAR NOT NULL,
+        "fileSize" INT NOT NULL,
+        "mimeType" VARCHAR NOT NULL,
+        "metadata" JSONB,
+        "isPublic" BOOLEAN DEFAULT false,
+        "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
+        "updatedAt" TIMESTAMP NOT NULL DEFAULT now(),
+        "deletedAt" TIMESTAMP
+        ) PARTITION BY RANGE ("createdAt");
+        END IF;
+      END $$;
+    `;
+  }
+
+  static createPartitionSQL(year: number, month: number) {
+    const from = `${year}-${String(month).padStart(2, '0')}-01`;
+    const toMonth = month === 12 ? 1 : month + 1;
+    const toYear = month === 12 ? year + 1 : year;
+    const to = `${toYear}-${String(toMonth).padStart(2, '0')}-01`;
+    const partitionName = `file_${year}_${String(month).padStart(2, '0')}`;
+    return `
+      CREATE TABLE IF NOT EXISTS "${partitionName}" PARTITION OF "file"
+      FOR VALUES FROM ('${from}') TO ('${to}');
+      CREATE INDEX IF NOT EXISTS idx_${partitionName}_ownerId ON "${partitionName}" ("ownerId");
+      CREATE INDEX IF NOT EXISTS idx_${partitionName}_filePath ON "${partitionName}" ("filePath");
+    `;
+  }
 }
