@@ -12,6 +12,7 @@ import { AccountModule } from './account/account.module';
 import { StreamModule } from './stream/stream.module';
 import { MinioModule } from './minio/minio.module';
 import { LoggerModule } from './logger/logger.module';
+import { DatabasePartitionInitializer } from './common/\bbootstrap/partition-initializer';
 
 const envValidationSchema = Joi.object({
   PORT: Joi.number().required(),
@@ -66,5 +67,6 @@ const serviceModule = [
 ];
 @Module({
   imports: [...conifgModule, ...serviceModule],
+  providers: [DatabasePartitionInitializer],
 })
 export class AppModule {}

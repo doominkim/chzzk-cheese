@@ -1,9 +1,9 @@
 import { IsJSON, IsString } from 'class-validator';
-import { CoreHardEntity } from 'src/common/entities/core-hard.entity';
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, ManyToOne, Entity } from 'typeorm';
 import { Channel } from './channel.entity';
+import { CoreHardEntity } from 'src/common/entities/core-hard.entity';
 
-@Entity({ name: 'channelChatLog', schema: process.env.DB_SCHEMA_NAME })
+@Entity({ name: 'channelChatLog', synchronize: false })
 export class ChannelChatLog extends CoreHardEntity {
   @Column({ type: 'varchar', length: 100, nullable: false })
   @IsString()
@@ -35,4 +35,48 @@ export class ChannelChatLog extends CoreHardEntity {
   @Column({ type: 'jsonb', nullable: true })
   @IsJSON()
   extras: JSON;
+
+  /**
+   * channelChatLog 테이블 생성 DDL
+   * - 파티셔닝: createdAt 기준 RANGE
+   */
+  static createPartitionedTable() {
+    return `
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_tables WHERE tablename = 'channelChatLog'
+        ) THEN
+         CREATE TABLE "channelChatLog" (
+				  id SERIAL,
+				  "chatType" VARCHAR(100) NOT NULL,
+				  "chatChannelId" VARCHAR(100) NOT NULL,
+				  "message" VARCHAR(2000),
+				  "userIdHash" VARCHAR(100),
+				  "nickname" VARCHAR(100),
+				  "profile" JSONB,
+				  "extras" JSONB,
+				  "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
+          "updatedAt" TIMESTAMP NOT NULL DEFAULT now(),
+          "deletedAt" TIMESTAMP,
+          "channelId" INT NOT NULL,
+          FOREIGN KEY ("channelId") REFERENCES "channel"("id")
+				) PARTITION BY RANGE ("createdAt");
+        END IF;
+      END $$;
+    `;
+  }
+
+  static createPartitionSQL(year: number, month: number) {
+    // 예: 2024_06 → 2024-06-01 ~ 2024-07-01
+    const from = `${year}-${String(month).padStart(2, '0')}-01`;
+    const toMonth = month === 12 ? 1 : month + 1;
+    const toYear = month === 12 ? year + 1 : year;
+    const to = `${toYear}-${String(toMonth).padStart(2, '0')}-01`;
+    return `
+      CREATE TABLE IF NOT EXISTS "channelChatLog_${year}_${String(
+      month,
+    ).padStart(2, '0')}" PARTITION OF "channelChatLog"
+      FOR VALUES FROM ('${from}') TO ('${to}');
+    `;
+  }
 }
