@@ -16,11 +16,11 @@ export class DatabasePartitionInitializer {
 
       const currentPartition = entity.createPartitionSQL(
         now.getFullYear(),
-        now.getMonth(),
+        now.getMonth() + 1,
       );
       const nextPartition = entity.createPartitionSQL(
         now.getFullYear(),
-        now.getMonth() + 1,
+        now.getMonth() + 2,
       );
 
       await this.dataSource.query(createMasterTable);

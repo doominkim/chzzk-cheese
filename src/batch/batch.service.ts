@@ -23,7 +23,7 @@ import { ChannelChatLogService } from 'src/channel/services/channel-chat-log.ser
 import { GenerateChannelChatLogDto } from 'src/channel/dtos/generate-channel-cat-log.dto';
 import { DataSource } from 'typeorm';
 import { StreamService } from 'src/stream/stream.service';
-import { DatabasePartitionInitializer } from 'src/common/\bbootstrap/partition-initializer';
+import { DatabasePartitionInitializer } from 'src/common/bootstrap/partition-initializer';
 @Injectable()
 export class BatchService {
   private readonly logger = new Logger(BatchService.name);

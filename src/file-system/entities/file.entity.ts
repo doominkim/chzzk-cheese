@@ -4,7 +4,6 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  Index,
 } from 'typeorm';
 import { FileType, FileMetadata } from '../types';
 import { CoreHardEntity } from 'src/common/entities/core-hard.entity';
