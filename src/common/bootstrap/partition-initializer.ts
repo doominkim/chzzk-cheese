@@ -14,12 +14,17 @@ export class DatabasePartitionInitializer {
       const createMasterTable = entity.createPartitionedTable();
       const now = new Date();
 
+      const currentPartition = entity.createPartitionSQL(
+        now.getFullYear(),
+        now.getMonth(),
+      );
       const nextPartition = entity.createPartitionSQL(
         now.getFullYear(),
         now.getMonth() + 1,
       );
 
       await this.dataSource.query(createMasterTable);
+      await this.dataSource.query(currentPartition);
       await this.dataSource.query(nextPartition);
     }
   }

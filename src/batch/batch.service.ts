@@ -23,6 +23,7 @@ import { ChannelChatLogService } from 'src/channel/services/channel-chat-log.ser
 import { GenerateChannelChatLogDto } from 'src/channel/dtos/generate-channel-cat-log.dto';
 import { DataSource } from 'typeorm';
 import { StreamService } from 'src/stream/stream.service';
+import { DatabasePartitionInitializer } from 'src/common/\bbootstrap/partition-initializer';
 @Injectable()
 export class BatchService {
   private readonly logger = new Logger(BatchService.name);
@@ -37,6 +38,7 @@ export class BatchService {
     private channelChatLogService: ChannelChatLogService,
     private dataSource: DataSource,
     private streamService: StreamService,
+    private partitionInitializer: DatabasePartitionInitializer,
   ) {
     this.chzzkModules = new Map<string, ChzzkModule>();
   }
@@ -276,5 +278,10 @@ export class BatchService {
     await this.channelLiveLogService.generateChannelLiveLog(
       generateChannelLiveLogDto,
     );
+  }
+
+  @Cron('0 0 25 * *')
+  async prepareNextMonthPartitions() {
+    await this.partitionInitializer.onModuleInit();
   }
 }
