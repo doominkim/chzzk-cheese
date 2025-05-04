@@ -1,10 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 import { FileType, FileMetadata } from '../types';
 import { CoreHardEntity } from 'src/common/entities/core-hard.entity';
 
@@ -45,11 +39,8 @@ export class File extends CoreHardEntity {
   @Column({ default: false })
   isPublic: boolean;
 
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
+  @Column({ default: false })
+  analyzed: boolean;
 
   static createPartitionedTable() {
     return `
@@ -69,7 +60,8 @@ export class File extends CoreHardEntity {
         "isPublic" BOOLEAN DEFAULT false,
         "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
         "updatedAt" TIMESTAMP NOT NULL DEFAULT now(),
-        "deletedAt" TIMESTAMP
+        "deletedAt" TIMESTAMP,
+        "analyzed" BOOLEAN DEFAULT false
         ) PARTITION BY RANGE ("createdAt");
         END IF;
       END $$;
@@ -87,6 +79,8 @@ export class File extends CoreHardEntity {
       FOR VALUES FROM ('${from}') TO ('${to}');
       CREATE INDEX IF NOT EXISTS idx_${partitionName}_ownerId ON "${partitionName}" ("ownerId");
       CREATE INDEX IF NOT EXISTS idx_${partitionName}_filePath ON "${partitionName}" ("filePath");
+      CREATE INDEX IF NOT EXISTS idx_${partitionName}_analyzed ON "${partitionName}" ("analyzed");
+      CREATE INDEX IF NOT EXISTS idx_${partitionName}_createdAt ON "${partitionName}" ("createdAt");
     `;
   }
 }
