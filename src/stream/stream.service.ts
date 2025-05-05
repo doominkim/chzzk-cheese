@@ -12,6 +12,7 @@ import { ChannelService } from 'src/channel/services/channel.service';
 import { FileService } from '../file-system/services/file.service';
 import { FileType } from '../file-system/types';
 import { StreamError } from './stream.error';
+import { QueueService } from 'src/queue/queue.service';
 
 interface ChannelProcesses {
   streamlink: ChildProcess | null;
@@ -55,6 +56,7 @@ export class StreamService {
     private readonly logger: LoggerService,
     private readonly channelService: ChannelService,
     private readonly fileService: FileService,
+    private readonly queueService: QueueService,
   ) {
     if (!existsSync(this.outputDir)) {
       mkdirSync(this.outputDir, { recursive: true });
@@ -414,6 +416,7 @@ export class StreamService {
       for (const file of completedAudioFiles) {
         const filePath = join(channelDir, file);
         const fileKey = `${channelId}/${liveId}/audios/${file}`;
+        const objectName = `channels/${channelId}/lives/${liveId}/audios/${file}`;
 
         // 이미 업로드된 파일인지 확인
         if (this.uploadedFiles.has(fileKey)) {
@@ -433,6 +436,13 @@ export class StreamService {
             );
 
           await this.saveFileToDB(channelId, liveId, filePath, FileType.AUDIO);
+          await this.queueService.addAudioJob({
+            filePath: objectName,
+            channelId,
+            liveId,
+            startTime: '0',
+            endTime: '0',
+          });
 
           if (uploadedAudioFiles.length > 0) {
             this.uploadedFiles.add(fileKey);
