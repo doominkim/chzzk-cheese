@@ -14,6 +14,8 @@ import { MinioModule } from './minio/minio.module';
 import { LoggerModule } from './logger/logger.module';
 import { DatabasePartitionInitializer } from './common/bootstrap/partition-initializer';
 import { MediaAiHubModule } from './media-ai-hub/media-ai-hub.module';
+import { QueueModule } from './queue/queue.module';
+import { BullBoardAppModule } from './queue/bull-board.module';
 
 const envValidationSchema = Joi.object({
   PORT: Joi.number().required(),
@@ -66,6 +68,8 @@ const serviceModule = [
   MinioModule,
   LoggerModule,
   MediaAiHubModule,
+  QueueModule,
+  BullBoardAppModule,
 ];
 @Module({
   imports: [...conifgModule, ...serviceModule],
