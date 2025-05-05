@@ -16,8 +16,10 @@ async function bootstrap() {
   app.setGlobalPrefix('/api');
 
   const config = new DocumentBuilder()
-    .setTitle('Chzzk API')
+    .setTitle('Stream Chat Monitor API')
+    .setDescription('Stream Chat Monitor API description')
     .setVersion('1.0')
+    .addTag('queue')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('apis', app, document);
@@ -33,14 +35,16 @@ async function bootstrap() {
   const serverAdapter = new ExpressAdapter();
   serverAdapter.setBasePath('/admin/queues');
 
+  const audioQueue = app.get('BullQueue_audio-processing');
+  const whisperQueue = app.get('BullQueue_whisper-processing');
+
   const { addQueue, removeQueue, setQueues, replaceQueues } = createBullBoard({
-    queues: [],
-    serverAdapter: serverAdapter,
+    queues: [new BullAdapter(audioQueue), new BullAdapter(whisperQueue)],
+    serverAdapter,
   });
 
   // 큐 등록
-  const messageQueue = app.get('BullQueue_message-queue');
-  setQueues([new BullAdapter(messageQueue)]);
+  setQueues([new BullAdapter(audioQueue), new BullAdapter(whisperQueue)]);
 
   // 미들웨어 추가
   app.use('/admin/queues', serverAdapter.getRouter());

@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { QueueService } from './queue.service';
-import { QueueProcessor } from './queue.processor';
+import { AudioProcessor, WhisperProcessor } from './queue.processor';
 import { QueueController } from './queue.controller';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullAdapter } from '@bull-board/api/bullAdapter';
@@ -27,15 +27,22 @@ import { BullAdapter } from '@bull-board/api/bullAdapter';
       }),
     }),
     BullModule.registerQueue({
-      name: 'message-queue',
+      name: 'audio-processing',
+    }),
+    BullModule.registerQueue({
+      name: 'whisper-processing',
     }),
     BullBoardModule.forFeature({
-      name: 'message-queue',
+      name: 'audio-processing',
+      adapter: BullAdapter,
+    }),
+    BullBoardModule.forFeature({
+      name: 'whisper-processing',
       adapter: BullAdapter,
     }),
   ],
   controllers: [QueueController],
-  providers: [QueueService, QueueProcessor],
+  providers: [QueueService, AudioProcessor, WhisperProcessor],
   exports: [QueueService],
 })
 export class QueueModule {}

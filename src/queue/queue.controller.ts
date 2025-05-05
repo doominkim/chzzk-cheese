@@ -1,32 +1,46 @@
-import { Controller, Post, Get, Body, Query } from '@nestjs/common';
+import { Controller, Post, Get, Body } from '@nestjs/common';
 import { QueueService } from './queue.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { MessageDto, BulkMessageDto } from './dto/message.dto';
+import { AudioJobDto, WhisperResultDto } from './dto/audio.dto';
 
 @ApiTags('Queue')
 @Controller('queue')
 export class QueueController {
   constructor(private readonly queueService: QueueService) {}
 
-  @Post('add')
-  @ApiOperation({ summary: '큐에 메시지 추가' })
+  @Post('audio')
+  @ApiOperation({ summary: '오디오 처리 작업 추가' })
   @ApiResponse({
     status: 201,
-    description: '메시지가 큐에 추가됨',
+    description: '오디오 작업이 큐에 추가됨',
     schema: {
-      example: { message: 'Message added to queue' },
+      example: { message: 'Audio job added to queue' },
     },
   })
-  async addMessage(@Body() data: MessageDto) {
-    await this.queueService.addMessage(data);
-    return { message: 'Message added to queue' };
+  async addAudioJob(@Body() data: AudioJobDto) {
+    await this.queueService.addAudioJob(data);
+    return { message: 'Audio job added to queue' };
   }
 
-  @Get('status')
-  @ApiOperation({ summary: '큐 상태 확인' })
+  @Post('whisper')
+  @ApiOperation({ summary: 'Whisper 결과 추가' })
+  @ApiResponse({
+    status: 201,
+    description: 'Whisper 결과가 큐에 추가됨',
+    schema: {
+      example: { message: 'Whisper result added to queue' },
+    },
+  })
+  async addWhisperResult(@Body() data: WhisperResultDto) {
+    await this.queueService.addWhisperResult(data);
+    return { message: 'Whisper result added to queue' };
+  }
+
+  @Get('audio/status')
+  @ApiOperation({ summary: '오디오 큐 상태 확인' })
   @ApiResponse({
     status: 200,
-    description: '큐 상태 반환',
+    description: '오디오 큐 상태 반환',
     schema: {
       example: {
         waiting: 0,
@@ -37,80 +51,110 @@ export class QueueController {
       },
     },
   })
-  async getStatus() {
-    return await this.queueService.getJobCounts();
+  async getAudioStatus() {
+    return await this.queueService.getAudioJobCounts();
   }
 
-  @Post('clean')
-  @ApiOperation({ summary: '완료/실패된 작업 정리' })
+  @Get('whisper/status')
+  @ApiOperation({ summary: 'Whisper 큐 상태 확인' })
   @ApiResponse({
     status: 200,
-    description: '작업이 정리됨',
+    description: 'Whisper 큐 상태 반환',
     schema: {
-      example: { message: 'Jobs cleaned' },
+      example: {
+        waiting: 0,
+        active: 0,
+        completed: 0,
+        failed: 0,
+        delayed: 0,
+      },
     },
   })
-  async cleanJobs() {
-    await this.queueService.cleanJobs();
-    return { message: 'Jobs cleaned' };
+  async getWhisperStatus() {
+    return await this.queueService.getWhisperJobCounts();
   }
 
-  @Post('reset')
-  @ApiOperation({ summary: '큐 초기화' })
+  @Post('audio/clean')
+  @ApiOperation({ summary: '오디오 큐 정리' })
   @ApiResponse({
     status: 200,
-    description: '큐가 초기화됨',
+    description: '오디오 큐가 정리됨',
     schema: {
-      example: { message: 'Queue reset' },
+      example: { message: 'Audio queue cleaned' },
     },
   })
-  async resetQueue() {
-    await this.queueService.reset();
-    return { message: 'Queue reset' };
+  async cleanAudioJobs() {
+    await this.queueService.cleanAudioJobs();
+    return { message: 'Audio queue cleaned' };
   }
 
-  @Post('pause')
-  @ApiOperation({ summary: '큐 일시정지' })
+  @Post('whisper/clean')
+  @ApiOperation({ summary: 'Whisper 큐 정리' })
   @ApiResponse({
     status: 200,
-    description: '큐가 일시정지됨',
+    description: 'Whisper 큐가 정리됨',
     schema: {
-      example: { message: 'Queue paused' },
+      example: { message: 'Whisper queue cleaned' },
     },
   })
-  async pauseQueue() {
-    await this.queueService.pause();
-    return { message: 'Queue paused' };
+  async cleanWhisperJobs() {
+    await this.queueService.cleanWhisperJobs();
+    return { message: 'Whisper queue cleaned' };
   }
 
-  @Post('resume')
-  @ApiOperation({ summary: '큐 재개' })
+  @Post('audio/pause')
+  @ApiOperation({ summary: '오디오 큐 일시정지' })
   @ApiResponse({
     status: 200,
-    description: '큐가 재개됨',
+    description: '오디오 큐가 일시정지됨',
     schema: {
-      example: { message: 'Queue resumed' },
+      example: { message: 'Audio queue paused' },
     },
   })
-  async resumeQueue() {
-    await this.queueService.resume();
-    return { message: 'Queue resumed' };
+  async pauseAudioQueue() {
+    await this.queueService.pauseAudioQueue();
+    return { message: 'Audio queue paused' };
   }
 
-  @Post('bulk-add')
-  @ApiOperation({ summary: '대량의 메시지 추가' })
+  @Post('audio/resume')
+  @ApiOperation({ summary: '오디오 큐 재개' })
   @ApiResponse({
-    status: 201,
-    description: '메시지들이 큐에 추가됨',
+    status: 200,
+    description: '오디오 큐가 재개됨',
     schema: {
-      example: { message: '2 messages added to queue' },
+      example: { message: 'Audio queue resumed' },
     },
   })
-  async bulkAddMessages(@Body() data: BulkMessageDto) {
-    const promises = data.messages.map((message) =>
-      this.queueService.addMessage(message),
-    );
-    await Promise.all(promises);
-    return { message: `${data.messages.length} messages added to queue` };
+  async resumeAudioQueue() {
+    await this.queueService.resumeAudioQueue();
+    return { message: 'Audio queue resumed' };
+  }
+
+  @Post('whisper/pause')
+  @ApiOperation({ summary: 'Whisper 큐 일시정지' })
+  @ApiResponse({
+    status: 200,
+    description: 'Whisper 큐가 일시정지됨',
+    schema: {
+      example: { message: 'Whisper queue paused' },
+    },
+  })
+  async pauseWhisperQueue() {
+    await this.queueService.pauseWhisperQueue();
+    return { message: 'Whisper queue paused' };
+  }
+
+  @Post('whisper/resume')
+  @ApiOperation({ summary: 'Whisper 큐 재개' })
+  @ApiResponse({
+    status: 200,
+    description: 'Whisper 큐가 재개됨',
+    schema: {
+      example: { message: 'Whisper queue resumed' },
+    },
+  })
+  async resumeWhisperQueue() {
+    await this.queueService.resumeWhisperQueue();
+    return { message: 'Whisper queue resumed' };
   }
 }
