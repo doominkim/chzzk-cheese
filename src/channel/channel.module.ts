@@ -17,7 +17,7 @@ import { ChannelLiveRepository } from './repositories/channel-live.repository';
 import { ChannelLiveCategoryRepository } from './repositories/channel-live-category.repository';
 import { ChannelChatLogRepository } from './repositories/channel-chat-log.repository';
 import { ChannelChatLogService } from './services/channel-chat-log.service';
-
+import { ChannelLiveTranscript } from './entities/channel-live-transcript.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -26,6 +26,7 @@ import { ChannelChatLogService } from './services/channel-chat-log.service';
       ChannelChatLog,
       ChannelLiveLog,
       ChannelLiveCategory,
+      ChannelLiveTranscript,
     ]),
     ChzzkModule,
   ],
