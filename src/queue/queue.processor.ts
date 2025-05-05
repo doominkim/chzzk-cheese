@@ -1,25 +1,7 @@
 import { Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
-import { AudioJobDto, WhisperResultDto } from './dto/audio.dto';
+import { WhisperResultDto } from './dto/audio.dto';
 import { Logger } from '@nestjs/common';
-
-@Processor('audio-processing')
-export class AudioProcessor {
-  private readonly logger = new Logger(AudioProcessor.name);
-
-  @Process('process-audio')
-  async handleAudioJob(job: Job<AudioJobDto>) {
-    try {
-      this.logger.log(`Processing audio job: ${JSON.stringify(job.data)}`);
-      // 여기서 DB에 오디오 정보 저장
-      // 저장 후 Whisper 처리를 위해 큐에 추가
-      return { success: true };
-    } catch (error) {
-      this.logger.error(`Error processing audio job: ${error.message}`);
-      throw error;
-    }
-  }
-}
 
 @Processor('whisper-processing')
 export class WhisperProcessor {

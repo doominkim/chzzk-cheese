@@ -40,6 +40,12 @@ export class WhisperResultDto {
   channelId: string;
 
   @ApiProperty({
+    description: '라이브 ID',
+    example: '123456',
+  })
+  liveId: string;
+
+  @ApiProperty({
     description: '시작 시간',
     example: '2024-05-05T12:00:00Z',
   })
