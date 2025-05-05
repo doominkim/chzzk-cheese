@@ -25,6 +25,7 @@ export class StreamService {
   private readonly maxFileAge = 24 * 60 * 60 * 1000; // 24시간
   private readonly maxDirSize = 10 * 1024 * 1024 * 1024; // 10GB
   private readonly channelProcesses: Map<string, ChannelProcesses> = new Map();
+  private readonly uploadedFiles: Set<string> = new Set();
 
   private readonly ERROR_MESSAGES = {
     CHANNEL_NOT_FOUND: '채널을 찾을 수 없습니다.',
@@ -60,6 +61,8 @@ export class StreamService {
     }
     // 주기적으로 임시 파일 정리
     setInterval(() => this.cleanupTempFiles(), 60 * 60 * 1000); // 1시간마다
+    // 주기적으로 업로드된 파일 목록 정리
+    setInterval(() => this.cleanupUploadedFiles(), 60 * 60 * 1000); // 1시간마다
   }
 
   private getChannelProcesses(channelId: string): ChannelProcesses {
@@ -137,7 +140,7 @@ export class StreamService {
       '-f',
       'segment',
       '-segment_time',
-      '10',
+      '60',
       '-reset_timestamps',
       '1',
       '-movflags',
@@ -188,7 +191,7 @@ export class StreamService {
       '-f',
       'image2',
       '-vf',
-      'fps=0.1',
+      'fps=1/60',
       '-timestamp',
       'now',
       join(channelDir, `capture_${Date.now()}_%03d.jpg`),
@@ -366,6 +369,15 @@ export class StreamService {
     }
   }
 
+  private cleanupUploadedFiles() {
+    this.uploadedFiles.clear();
+    this.logger.log(
+      LogLevel.INFO,
+      LogSource.STREAM,
+      'Cleared uploaded files cache',
+    );
+  }
+
   private isFileComplete(filePath: string): boolean {
     try {
       const stats = statSync(filePath);
@@ -401,6 +413,13 @@ export class StreamService {
       // 오디오 파일 순차 처리
       for (const file of completedAudioFiles) {
         const filePath = join(channelDir, file);
+        const fileKey = `${channelId}/${liveId}/audios/${file}`;
+
+        // 이미 업로드된 파일인지 확인
+        if (this.uploadedFiles.has(fileKey)) {
+          continue;
+        }
+
         try {
           const { audioFiles: uploadedAudioFiles } =
             await this.minioService.uploadStreamFiles(
@@ -416,6 +435,7 @@ export class StreamService {
           await this.saveFileToDB(channelId, liveId, filePath, FileType.AUDIO);
 
           if (uploadedAudioFiles.length > 0) {
+            this.uploadedFiles.add(fileKey);
             if (existsSync(filePath)) {
               unlinkSync(filePath);
               this.logger.log(
@@ -436,6 +456,12 @@ export class StreamService {
       // 이미지 파일 순차 처리
       for (const file of completedImageFiles) {
         const filePath = join(channelDir, file);
+        const fileKey = `${channelId}/${liveId}/images/${file}`;
+
+        // 이미 업로드된 파일인지 확인
+        if (this.uploadedFiles.has(fileKey)) {
+          continue;
+        }
 
         try {
           const { imageFiles: uploadedImageFiles } =
@@ -452,7 +478,7 @@ export class StreamService {
           await this.saveFileToDB(channelId, liveId, filePath, FileType.IMAGE);
 
           if (uploadedImageFiles.length > 0) {
-            const filePath = join(channelDir, file);
+            this.uploadedFiles.add(fileKey);
             if (existsSync(filePath)) {
               unlinkSync(filePath);
               this.logger.log(
@@ -488,6 +514,12 @@ export class StreamService {
     const typeDir = fileType === FileType.AUDIO ? 'audios' : 'images';
     const minioPath = `${process.env.MINIO_BUCKET}/channels/${channelId}/lives/${liveId}/${typeDir}/${fileName}`;
 
+    // 파일 이름에서 타임스탬프 추출 (예: audio_1234567890_001.aac)
+    const timestampMatch = fileName.match(/_(\d+)_/);
+    const recordedAt = timestampMatch
+      ? new Date(parseInt(timestampMatch[1]))
+      : new Date();
+
     await this.fileService.createFile({
       ownerId: channelId,
       filePath: minioPath,
@@ -501,6 +533,7 @@ export class StreamService {
         channelId,
         fileName,
         createdAt: new Date(),
+        recordedAt,
       },
     });
   }
