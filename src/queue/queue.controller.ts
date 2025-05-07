@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body } from '@nestjs/common';
+import { Controller, Post, Get, Body, Query } from '@nestjs/common';
 import { QueueService } from './queue.service';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AudioJobDto, WhisperResultDto } from './dto/audio.dto';
@@ -14,12 +14,18 @@ export class QueueController {
     status: 201,
     description: '오디오 작업이 큐에 추가됨',
     schema: {
-      example: { message: 'Audio job added to queue' },
+      example: {
+        jobId: '123',
+        message: 'Audio job added to queue',
+      },
     },
   })
   async addAudioJob(@Body() data: AudioJobDto) {
-    await this.queueService.addAudioJob(data);
-    return { message: 'Audio job added to queue' };
+    const job = await this.queueService.addAudioJob(data);
+    return {
+      jobId: job.id,
+      message: 'Audio job added to queue',
+    };
   }
 
   @Post('whisper')
@@ -28,12 +34,83 @@ export class QueueController {
     status: 201,
     description: 'Whisper 결과가 큐에 추가됨',
     schema: {
-      example: { message: 'Whisper result added to queue' },
+      example: {
+        jobId: '123',
+        message: 'Whisper result added to queue',
+      },
     },
   })
   async addWhisperResult(@Body() data: WhisperResultDto) {
-    await this.queueService.addWhisperResult(data);
-    return { message: 'Whisper result added to queue' };
+    const job = await this.queueService.addWhisperResult(data);
+    return {
+      jobId: job.id,
+      message: 'Whisper result added to queue',
+    };
+  }
+
+  @Post('audio/next')
+  @ApiOperation({ summary: '다음 오디오 작업 가져오기' })
+  @ApiResponse({
+    status: 200,
+    description: '다음 오디오 작업 반환',
+    schema: {
+      example: {
+        id: '123',
+        data: {
+          filePath: '/path/to/audio.wav',
+          channelId: '123',
+          liveId: '456',
+          startTime: '2024-03-05T12:00:00Z',
+          endTime: '2024-03-05T12:01:00Z',
+        },
+        status: 'active',
+        progress: 0,
+        attemptsMade: 0,
+        timestamp: 1709635200000,
+        processedOn: 1709635201000,
+        finishedOn: null,
+      },
+    },
+  })
+  async getNextAudioJob() {
+    const job = await this.queueService.getNextAudioJob();
+    if (!job) {
+      return { message: 'No jobs available' };
+    }
+    return job;
+  }
+
+  @Post('whisper/next')
+  @ApiOperation({ summary: '다음 Whisper 작업 가져오기' })
+  @ApiResponse({
+    status: 200,
+    description: '다음 Whisper 작업 반환',
+    schema: {
+      example: {
+        id: '123',
+        data: {
+          channelId: '123',
+          liveId: '456',
+          filePath: '/path/to/audio.wav',
+          startTime: '2024-03-05T12:00:00Z',
+          endTime: '2024-03-05T12:01:00Z',
+          text: '변환된 텍스트',
+        },
+        status: 'active',
+        progress: 0,
+        attemptsMade: 0,
+        timestamp: 1709635200000,
+        processedOn: 1709635201000,
+        finishedOn: null,
+      },
+    },
+  })
+  async getNextWhisperJob() {
+    const job = await this.queueService.getNextWhisperJob();
+    if (!job) {
+      return { message: 'No jobs available' };
+    }
+    return job;
   }
 
   @Get('audio/status')
@@ -72,6 +149,26 @@ export class QueueController {
   })
   async getWhisperStatus() {
     return await this.queueService.getWhisperJobCounts();
+  }
+
+  @Get('audio/job')
+  @ApiOperation({ summary: '오디오 job 정보 조회' })
+  @ApiResponse({
+    status: 200,
+    description: 'job 정보 반환',
+  })
+  async getAudioJob(@Query('jobId') jobId: string) {
+    return await this.queueService.getAudioJob(jobId);
+  }
+
+  @Get('whisper/job')
+  @ApiOperation({ summary: 'Whisper job 정보 조회' })
+  @ApiResponse({
+    status: 200,
+    description: 'job 정보 반환',
+  })
+  async getWhisperJob(@Query('jobId') jobId: string) {
+    return await this.queueService.getWhisperJob(jobId);
   }
 
   @Post('audio/clean')

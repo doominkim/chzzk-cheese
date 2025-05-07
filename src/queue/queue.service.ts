@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
+import { Queue, Job } from 'bull';
 import { AudioJobDto, WhisperResultDto } from './dto/audio.dto';
 
 @Injectable()
@@ -11,11 +11,91 @@ export class QueueService {
   ) {}
 
   async addAudioJob(data: AudioJobDto) {
-    await this.audioQueue.add('process-audio', data);
+    const job = await this.audioQueue.add('process-audio', data, {
+      attempts: 1,
+      removeOnComplete: false,
+      removeOnFail: false,
+    });
+    return job;
   }
 
   async addWhisperResult(data: WhisperResultDto) {
-    await this.whisperQueue.add('process-whisper', data);
+    const job = await this.whisperQueue.add('process-whisper', data, {
+      attempts: 1,
+      removeOnComplete: false,
+      removeOnFail: false,
+    });
+    return job;
+  }
+
+  async getNextAudioJob() {
+    const job = await this.audioQueue.getNextJob();
+    if (!job) return null;
+
+    // job을 active 상태로 변경
+    await job.takeLock();
+
+    return {
+      id: job.id,
+      data: job.data,
+      status: await job.getState(),
+      progress: job.progress(),
+      attemptsMade: job.attemptsMade,
+      timestamp: job.timestamp,
+      processedOn: job.processedOn,
+      finishedOn: job.finishedOn,
+    };
+  }
+
+  async getNextWhisperJob() {
+    const job = await this.whisperQueue.getNextJob();
+    if (!job) return null;
+
+    // job을 active 상태로 변경
+    await job.takeLock();
+
+    return {
+      id: job.id,
+      data: job.data,
+      status: await job.getState(),
+      progress: job.progress(),
+      attemptsMade: job.attemptsMade,
+      timestamp: job.timestamp,
+      processedOn: job.processedOn,
+      finishedOn: job.finishedOn,
+    };
+  }
+
+  async getAudioJob(jobId: string) {
+    const job = await this.audioQueue.getJob(jobId);
+    if (!job) return null;
+
+    return {
+      id: job.id,
+      data: job.data,
+      status: await job.getState(),
+      progress: job.progress(),
+      attemptsMade: job.attemptsMade,
+      timestamp: job.timestamp,
+      processedOn: job.processedOn,
+      finishedOn: job.finishedOn,
+    };
+  }
+
+  async getWhisperJob(jobId: string) {
+    const job = await this.whisperQueue.getJob(jobId);
+    if (!job) return null;
+
+    return {
+      id: job.id,
+      data: job.data,
+      status: await job.getState(),
+      progress: job.progress(),
+      attemptsMade: job.attemptsMade,
+      timestamp: job.timestamp,
+      processedOn: job.processedOn,
+      finishedOn: job.finishedOn,
+    };
   }
 
   async getAudioJobCounts() {
