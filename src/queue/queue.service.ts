@@ -38,6 +38,7 @@ export class QueueService {
     const job = await queue.getNextJob();
     if (!job) return null;
 
+    await job.progress(0);
     await job.takeLock();
 
     return {
@@ -66,6 +67,48 @@ export class QueueService {
       timestamp: job.timestamp,
       processedOn: job.processedOn,
       finishedOn: job.finishedOn,
+    };
+  }
+
+  async completeJob(key: string, jobId: string, result?: any) {
+    const queue = this.getQueue(key);
+    const job = await queue.getJob(jobId);
+    if (!job) {
+      throw new Error(`Job ${jobId} not found`);
+    }
+
+    const state = await job.getState();
+    if (state !== 'active') {
+      throw new Error(`Job ${jobId} is not active (current state: ${state})`);
+    }
+
+    await job.moveToCompleted(result);
+
+    return {
+      id: job.id,
+      status: 'completed',
+      result,
+    };
+  }
+
+  async failJob(key: string, jobId: string, error?: string) {
+    const queue = this.getQueue(key);
+    const job = await queue.getJob(jobId);
+    if (!job) {
+      throw new Error(`Job ${jobId} not found`);
+    }
+
+    const state = await job.getState();
+    if (state !== 'active') {
+      throw new Error(`Job ${jobId} is not active (current state: ${state})`);
+    }
+
+    await job.moveToFailed({ message: error || 'Job failed' });
+
+    return {
+      id: job.id,
+      status: 'failed',
+      error,
     };
   }
 

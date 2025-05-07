@@ -226,4 +226,90 @@ export class QueueController {
     await this.queueService.resumeQueue(key);
     return { message: 'Queue resumed successfully' };
   }
+
+  @Post(':key/:jobId/complete')
+  @ApiOperation({ summary: 'Complete a job' })
+  @ApiParam({
+    name: 'key',
+    enum: ['audio-processing', 'whisper-processing'],
+    description: 'Queue name',
+  })
+  @ApiParam({
+    name: 'jobId',
+    description: 'Job ID',
+  })
+  @ApiBody({
+    description: 'Job result',
+    schema: {
+      type: 'object',
+      properties: {
+        result: {
+          type: 'object',
+          description: 'Job result data',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Job completed successfully',
+    schema: {
+      example: {
+        id: '123',
+        status: 'completed',
+        result: {
+          text: '안녕하세요. 오늘은 좋은 날씨네요.',
+        },
+      },
+    },
+  })
+  async completeJob(
+    @Param('key') key: string,
+    @Param('jobId') jobId: string,
+    @Body() body: { result?: any },
+  ) {
+    return await this.queueService.completeJob(key, jobId, body.result);
+  }
+
+  @Post(':key/:jobId/fail')
+  @ApiOperation({ summary: 'Fail a job' })
+  @ApiParam({
+    name: 'key',
+    enum: ['audio-processing', 'whisper-processing'],
+    description: 'Queue name',
+  })
+  @ApiParam({
+    name: 'jobId',
+    description: 'Job ID',
+  })
+  @ApiBody({
+    description: 'Error message',
+    schema: {
+      type: 'object',
+      properties: {
+        error: {
+          type: 'string',
+          description: 'Error message',
+        },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Job failed successfully',
+    schema: {
+      example: {
+        id: '123',
+        status: 'failed',
+        error: 'Failed to process audio file',
+      },
+    },
+  })
+  async failJob(
+    @Param('key') key: string,
+    @Param('jobId') jobId: string,
+    @Body() body: { error?: string },
+  ) {
+    return await this.queueService.failJob(key, jobId, body.error);
+  }
 }
