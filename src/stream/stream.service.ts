@@ -436,7 +436,7 @@ export class StreamService {
             );
 
           await this.saveFileToDB(channelId, liveId, filePath, FileType.AUDIO);
-          await this.queueService.addAudioJob({
+          await this.queueService.addJob('audio-processing', {
             filePath: objectName,
             channelId,
             liveId,
