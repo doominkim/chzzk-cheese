@@ -46,6 +46,12 @@ export class WhisperResultDto {
   liveId: string;
 
   @ApiProperty({
+    description: '오디오 파일 경로',
+    example: '/path/to/audio.wav',
+  })
+  filePath: string;
+
+  @ApiProperty({
     description: '시작 시간',
     example: '2024-05-05T12:00:00Z',
   })

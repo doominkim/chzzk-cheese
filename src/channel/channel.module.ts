@@ -18,6 +18,8 @@ import { ChannelLiveCategoryRepository } from './repositories/channel-live-categ
 import { ChannelChatLogRepository } from './repositories/channel-chat-log.repository';
 import { ChannelChatLogService } from './services/channel-chat-log.service';
 import { ChannelLiveTranscript } from './entities/channel-live-transcript.entity';
+import { ChannelLiveTranscriptService } from './services/channel-live-transcript.service';
+import { ChannelLiveTranscriptRepository } from './repositories/channel-live-transcript.repository';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -42,6 +44,8 @@ import { ChannelLiveTranscript } from './entities/channel-live-transcript.entity
     ChannelLiveCategoryRepository,
     ChannelChatLogService,
     ChannelChatLogRepository,
+    ChannelLiveTranscriptRepository,
+    ChannelLiveTranscriptService,
   ],
   exports: [
     ChannelService,
@@ -49,6 +53,7 @@ import { ChannelLiveTranscript } from './entities/channel-live-transcript.entity
     ChannelLiveLogService,
     ChannelLiveCategoryService,
     ChannelChatLogService,
+    ChannelLiveTranscriptService,
   ],
 })
 export class ChannelModule {}

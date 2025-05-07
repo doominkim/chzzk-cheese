@@ -6,6 +6,7 @@ import { QueueController } from './queue.controller';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullAdapter } from '@bull-board/api/bullAdapter';
 import { WhisperProcessor } from './queue.processor';
+import { ChannelModule } from 'src/channel/channel.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { WhisperProcessor } from './queue.processor';
       name: 'whisper-processing',
       adapter: BullAdapter,
     }),
+    ChannelModule,
   ],
   controllers: [QueueController],
   providers: [QueueService, WhisperProcessor],
