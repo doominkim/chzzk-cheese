@@ -13,6 +13,8 @@ import { FileService } from '../file-system/services/file.service';
 import { FileType } from '../file-system/types';
 import { StreamError } from './stream.error';
 import { QueueService } from 'src/queue/queue.service';
+import { FileRepository } from '../file-system/repositories/file.repository';
+import { File } from '../file-system/entities/file.entity';
 
 interface ChannelProcesses {
   streamlink: ChildProcess | null;
@@ -57,6 +59,7 @@ export class StreamService {
     private readonly channelService: ChannelService,
     private readonly fileService: FileService,
     private readonly queueService: QueueService,
+    private readonly fileRepository: FileRepository,
   ) {
     if (!existsSync(this.outputDir)) {
       mkdirSync(this.outputDir, { recursive: true });
@@ -142,7 +145,7 @@ export class StreamService {
       '-f',
       'segment',
       '-segment_time',
-      '60',
+      '10',
       '-reset_timestamps',
       '1',
       '-movflags',
@@ -415,15 +418,45 @@ export class StreamService {
       // 오디오 파일 순차 처리
       for (const file of completedAudioFiles) {
         const filePath = join(channelDir, file);
-        const fileKey = `${channelId}/${liveId}/audios/${file}`;
         const objectName = `channels/${channelId}/lives/${liveId}/audios/${file}`;
 
-        // 이미 업로드된 파일인지 확인
-        if (this.uploadedFiles.has(fileKey)) {
-          continue;
-        }
-
         try {
+          // DB에서 이미 처리된 파일인지 확인
+          const existingFile = await this.fileRepository.findByObjectName(
+            objectName,
+          );
+          if (existingFile) {
+            this.logger.log(
+              LogLevel.INFO,
+              LogSource.STREAM,
+              `File already processed: ${objectName}`,
+            );
+            // 이미 처리된 파일은 로컬에서 삭제
+            if (existsSync(filePath)) {
+              unlinkSync(filePath);
+              this.logger.log(
+                LogLevel.INFO,
+                LogSource.STREAM,
+                `Deleted processed audio file: ${file}`,
+              );
+            }
+            continue;
+          }
+
+          // 파일이 아직 처리 중인지 확인 (큐에 있는지)
+          const isJobInQueue = await this.queueService.isJobInQueue(
+            'audio-processing',
+            objectName,
+          );
+          if (isJobInQueue) {
+            this.logger.log(
+              LogLevel.INFO,
+              LogSource.STREAM,
+              `File is already in queue: ${objectName}`,
+            );
+            continue;
+          }
+
           const { audioFiles: uploadedAudioFiles } =
             await this.minioService.uploadStreamFiles(
               channelId,
@@ -435,6 +468,10 @@ export class StreamService {
               },
             );
 
+          if (uploadedAudioFiles.length === 0) {
+            throw new Error('Failed to upload audio file');
+          }
+
           await this.saveFileToDB(channelId, liveId, filePath, FileType.AUDIO);
           await this.queueService.addJob('audio-processing', {
             filePath: objectName,
@@ -444,16 +481,13 @@ export class StreamService {
             endTime: '0',
           });
 
-          if (uploadedAudioFiles.length > 0) {
-            this.uploadedFiles.add(fileKey);
-            if (existsSync(filePath)) {
-              unlinkSync(filePath);
-              this.logger.log(
-                LogLevel.INFO,
-                LogSource.STREAM,
-                `Deleted uploaded audio file: ${file}`,
-              );
-            }
+          if (existsSync(filePath)) {
+            unlinkSync(filePath);
+            this.logger.log(
+              LogLevel.INFO,
+              LogSource.STREAM,
+              `Deleted uploaded audio file: ${file}`,
+            );
           }
         } catch (error) {
           this.logger.error(
@@ -466,14 +500,31 @@ export class StreamService {
       // 이미지 파일 순차 처리
       for (const file of completedImageFiles) {
         const filePath = join(channelDir, file);
-        const fileKey = `${channelId}/${liveId}/images/${file}`;
-
-        // 이미 업로드된 파일인지 확인
-        if (this.uploadedFiles.has(fileKey)) {
-          continue;
-        }
+        const objectName = `channels/${channelId}/lives/${liveId}/images/${file}`;
 
         try {
+          // DB에서 이미 처리된 파일인지 확인
+          const existingFile = await this.fileRepository.findByObjectName(
+            objectName,
+          );
+          if (existingFile) {
+            this.logger.log(
+              LogLevel.INFO,
+              LogSource.STREAM,
+              `File already processed: ${objectName}`,
+            );
+            // 이미 처리된 파일은 로컬에서 삭제
+            if (existsSync(filePath)) {
+              unlinkSync(filePath);
+              this.logger.log(
+                LogLevel.INFO,
+                LogSource.STREAM,
+                `Deleted processed image file: ${file}`,
+              );
+            }
+            continue;
+          }
+
           const { imageFiles: uploadedImageFiles } =
             await this.minioService.uploadStreamFiles(
               channelId,
@@ -485,18 +536,19 @@ export class StreamService {
               },
             );
 
+          if (uploadedImageFiles.length === 0) {
+            throw new Error('Failed to upload image file');
+          }
+
           await this.saveFileToDB(channelId, liveId, filePath, FileType.IMAGE);
 
-          if (uploadedImageFiles.length > 0) {
-            this.uploadedFiles.add(fileKey);
-            if (existsSync(filePath)) {
-              unlinkSync(filePath);
-              this.logger.log(
-                LogLevel.INFO,
-                LogSource.STREAM,
-                `Deleted uploaded image file: ${file}`,
-              );
-            }
+          if (existsSync(filePath)) {
+            unlinkSync(filePath);
+            this.logger.log(
+              LogLevel.INFO,
+              LogSource.STREAM,
+              `Deleted uploaded image file: ${file}`,
+            );
           }
         } catch (error) {
           this.logger.error(
@@ -546,5 +598,9 @@ export class StreamService {
         recordedAt,
       },
     });
+  }
+
+  async findByObjectName(objectName: string): Promise<File | null> {
+    return this.fileRepository.findByObjectName(objectName);
   }
 }

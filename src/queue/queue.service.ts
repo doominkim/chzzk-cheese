@@ -132,4 +132,13 @@ export class QueueService {
     const queue = this.getQueue(key);
     await queue.resume();
   }
+
+  async isJobInQueue(
+    key: 'audio-processing' | 'whisper-processing',
+    filePath: string,
+  ): Promise<boolean> {
+    const queue = this.getQueue(key);
+    const jobs = await queue.getJobs(['active', 'waiting']);
+    return jobs.some((job) => job.data.filePath === filePath);
+  }
 }

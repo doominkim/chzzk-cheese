@@ -7,6 +7,7 @@ import { BullBoardModule } from '@bull-board/nestjs';
 import { BullAdapter } from '@bull-board/api/bullAdapter';
 import { WhisperProcessor } from './queue.processor';
 import { ChannelModule } from 'src/channel/channel.module';
+import { FileSystemModule } from 'src/file-system/file-system.module';
 
 @Module({
   imports: [
@@ -20,17 +21,27 @@ import { ChannelModule } from 'src/channel/channel.module';
         },
         defaultJobOptions: {
           attempts: 1,
-          removeOnComplete: false,
-          removeOnFail: false,
+          removeOnComplete: true,
+          removeOnFail: true,
         },
       }),
     }),
-    BullModule.registerQueue({
-      name: 'audio-processing',
-    }),
-    BullModule.registerQueue({
-      name: 'whisper-processing',
-    }),
+    BullModule.registerQueue(
+      {
+        name: 'audio-processing',
+        defaultJobOptions: {
+          removeOnComplete: true,
+          removeOnFail: true,
+        },
+      },
+      {
+        name: 'whisper-processing',
+        defaultJobOptions: {
+          removeOnComplete: true,
+          removeOnFail: true,
+        },
+      },
+    ),
     BullBoardModule.forFeature({
       name: 'audio-processing',
       adapter: BullAdapter,
@@ -40,6 +51,7 @@ import { ChannelModule } from 'src/channel/channel.module';
       adapter: BullAdapter,
     }),
     ChannelModule,
+    FileSystemModule,
   ],
   controllers: [QueueController],
   providers: [QueueService, WhisperProcessor],

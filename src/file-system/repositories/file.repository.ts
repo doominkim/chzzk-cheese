@@ -15,4 +15,12 @@ export class FileRepository {
     const instance = this.repository.create(file);
     return this.repository.save(instance);
   }
+
+  async findByObjectName(objectName: string): Promise<File | null> {
+    return this.repository.findOne({
+      where: {
+        filePath: objectName,
+      },
+    });
+  }
 }
