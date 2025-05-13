@@ -115,10 +115,10 @@ export class StreamService {
     });
 
     processes.streamlink.stderr.on('data', (data: Buffer) => {
-      this.logger.info(
-        LogSource.STREAM,
-        `Streamlink info for channel ${channelId}: ${data}`,
-      );
+      // this.logger.info(
+      //   LogSource.STREAM,
+      //   `Streamlink info for channel ${channelId}: ${data}`,
+      // );
     });
   }
 
@@ -162,18 +162,18 @@ export class StreamService {
     processes.streamlink.stdout.pipe(processes.audio.stdin);
 
     processes.audio.on('exit', () => {
-      this.logger.info(
-        LogSource.STREAM,
-        `Audio process for channel ${channelId} exited`,
-      );
+      // this.logger.info(
+      //   LogSource.STREAM,
+      //   `Audio process for channel ${channelId} exited`,
+      // );
       processes.audio = null;
     });
 
     processes.audio.stderr.on('data', (data: Buffer) => {
-      this.logger.info(
-        LogSource.STREAM,
-        `Audio ffmpeg info for channel ${channelId}: ${data}`,
-      );
+      // this.logger.info(
+      //   LogSource.STREAM,
+      //   `Audio ffmpeg info for channel ${channelId}: ${data}`,
+      // );
     });
   }
 
@@ -205,18 +205,18 @@ export class StreamService {
     processes.streamlink.stdout.pipe(processes.capture.stdin);
 
     processes.capture.on('exit', () => {
-      this.logger.info(
-        LogSource.STREAM,
-        `Capture process for channel ${channelId} exited`,
-      );
+      // this.logger.info(
+      //   LogSource.STREAM,
+      //   `Capture process for channel ${channelId} exited`,
+      // );
       processes.capture = null;
     });
 
     processes.capture.stderr.on('data', (data: Buffer) => {
-      this.logger.info(
-        LogSource.STREAM,
-        `Capture ffmpeg info for channel ${channelId}: ${data}`,
-      );
+      // this.logger.info(
+      //   LogSource.STREAM,
+      //   `Capture ffmpeg info for channel ${channelId}: ${data}`,
+      // );
     });
   }
 

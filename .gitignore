@@ -37,8 +37,7 @@ lerna-debug.log*
 output/*
 
 # envs 폴더 무시
-envs/
-.env*
+.env.prod
 
 # 녹화 파일 무시
 recordings/

@@ -5,7 +5,6 @@ import { ValidationPipe } from '@nestjs/common';
 import { createBullBoard } from '@bull-board/api';
 import { BullAdapter } from '@bull-board/api/bullAdapter';
 import { ExpressAdapter } from '@bull-board/express';
-import { Queue } from 'bull';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 

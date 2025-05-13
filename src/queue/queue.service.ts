@@ -3,12 +3,60 @@ import { InjectQueue } from '@nestjs/bull';
 import { Queue, Job } from 'bull';
 import { AudioJobDto, WhisperResultDto } from './dto/audio.dto';
 
+interface HealthCheckTarget {
+  url: string;
+  lastCheck: number;
+  isHealthy: boolean;
+}
+
 @Injectable()
 export class QueueService {
+  private healthChecks: Map<string, HealthCheckTarget> = new Map();
+  private readonly HEALTH_CHECK_INTERVAL = 60 * 1000;
+
   constructor(
     @InjectQueue('audio-processing') private readonly audioQueue: Queue,
     @InjectQueue('whisper-processing') private readonly whisperQueue: Queue,
-  ) {}
+  ) {
+    // 초기 헬스 체크 대상 등록
+    this.addHealthCheckTarget(
+      'whisper_worker1',
+      'http://192.168.0.100:8000/health',
+    );
+  }
+
+  addHealthCheckTarget(name: string, url: string) {
+    this.healthChecks.set(name, {
+      url,
+      lastCheck: 0,
+      isHealthy: true,
+    });
+  }
+
+  private async checkHealth(): Promise<boolean> {
+    const now = Date.now();
+    let allHealthy = true;
+
+    for (const [name, target] of this.healthChecks) {
+      if (now - target.lastCheck < this.HEALTH_CHECK_INTERVAL) {
+        if (!target.isHealthy) allHealthy = false;
+        continue;
+      }
+
+      try {
+        const response = await fetch(target.url);
+        target.isHealthy = response.ok;
+        target.lastCheck = now;
+        if (!target.isHealthy) allHealthy = false;
+      } catch (error) {
+        target.isHealthy = false;
+        target.lastCheck = now;
+        allHealthy = false;
+      }
+    }
+
+    return allHealthy;
+  }
 
   private getQueue(key: string): Queue {
     switch (key) {
@@ -22,6 +70,11 @@ export class QueueService {
   }
 
   async addJob(key: string, data: AudioJobDto | WhisperResultDto) {
+    const isHealthy = await this.checkHealth();
+    if (!isHealthy) {
+      throw new Error('Service is not healthy');
+    }
+
     const queue = this.getQueue(key);
     const jobName =
       key === 'audio-processing' ? 'process-audio' : 'process-whisper';
@@ -29,6 +82,7 @@ export class QueueService {
       attempts: 1,
       removeOnComplete: false,
       removeOnFail: false,
+      timeout: 500 * 60 * 10, // 10 minutes
     });
     return job;
   }
