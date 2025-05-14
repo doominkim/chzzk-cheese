@@ -93,7 +93,7 @@ export class QueueService {
     const job = await queue.add(jobName, data, {
       attempts: 1,
       removeOnComplete: false,
-      removeOnFail: true,
+      removeOnFail: false,
       timeout: 100 * 60 * 10, // 10 minutes
     });
     return job;
