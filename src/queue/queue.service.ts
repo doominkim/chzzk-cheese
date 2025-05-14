@@ -92,7 +92,7 @@ export class QueueService {
       key === 'audio-processing' ? 'process-audio' : 'process-whisper';
     const job = await queue.add(jobName, data, {
       attempts: 1,
-      removeOnComplete: true,
+      removeOnComplete: false,
       removeOnFail: true,
       timeout: 100 * 60 * 10, // 10 minutes
     });
