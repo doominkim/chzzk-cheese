@@ -23,6 +23,18 @@ export class QueueService {
       'whisper_worker1',
       'http://192.168.0.100:8000/health',
     );
+    this.addHealthCheckTarget(
+      'whisper_worker2',
+      'http://192.168.0.100:8001/health',
+    );
+    this.addHealthCheckTarget(
+      'whisper_worker3',
+      'http://192.168.0.100:8002/health',
+    );
+    this.addHealthCheckTarget(
+      'whisper_worker4',
+      'http://192.168.0.100:8003/health',
+    );
   }
 
   addHealthCheckTarget(name: string, url: string) {
@@ -35,11 +47,11 @@ export class QueueService {
 
   private async checkHealth(): Promise<boolean> {
     const now = Date.now();
-    let allHealthy = true;
+    let anyHealthy = false;
 
     for (const [name, target] of this.healthChecks) {
       if (now - target.lastCheck < this.HEALTH_CHECK_INTERVAL) {
-        if (!target.isHealthy) allHealthy = false;
+        if (target.isHealthy) anyHealthy = true;
         continue;
       }
 
@@ -47,15 +59,14 @@ export class QueueService {
         const response = await fetch(target.url);
         target.isHealthy = response.ok;
         target.lastCheck = now;
-        if (!target.isHealthy) allHealthy = false;
+        if (target.isHealthy) anyHealthy = true;
       } catch (error) {
         target.isHealthy = false;
         target.lastCheck = now;
-        allHealthy = false;
       }
     }
 
-    return allHealthy;
+    return anyHealthy;
   }
 
   private getQueue(key: string): Queue {
