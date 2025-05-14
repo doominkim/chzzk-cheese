@@ -38,6 +38,6 @@ output/*
 
 # envs 폴더 무시
 .env.prod
-
+.env.dev
 # 녹화 파일 무시
 recordings/
