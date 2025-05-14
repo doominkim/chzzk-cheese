@@ -291,4 +291,9 @@ export class BatchService {
   async cleanOldJobs() {
     await this.queueService.cleanJobs('audio-processing');
   }
+
+  @Cron(CronExpression.EVERY_MINUTE)
+  async checkWhisperWorkerHealth() {
+    await this.queueService.addHealthCheckTarget();
+  }
 }

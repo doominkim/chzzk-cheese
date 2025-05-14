@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue, Job } from 'bull';
 import { AudioJobDto, WhisperResultDto } from './dto/audio.dto';
-import { debounce } from 'rxjs';
+import { async, debounce } from 'rxjs';
 
 interface HealthCheckTarget {
   url: string;
@@ -13,61 +13,56 @@ interface HealthCheckTarget {
 @Injectable()
 export class QueueService {
   private healthChecks: Map<string, HealthCheckTarget> = new Map();
+  private wispherWorkers: Map<string, HealthCheckTarget> = new Map();
+  private workersHealth = false;
   private readonly HEALTH_CHECK_INTERVAL = 60 * 1000;
 
   constructor(
     @InjectQueue('audio-processing') private readonly audioQueue: Queue,
     @InjectQueue('whisper-processing') private readonly whisperQueue: Queue,
   ) {
-    // 초기 헬스 체크 대상 등록
-    this.addHealthCheckTarget(
-      'whisper_worker1',
-      'http://192.168.0.100:8000/health',
-    );
-    this.addHealthCheckTarget(
-      'whisper_worker2',
-      'http://192.168.0.100:8001/health',
-    );
-    this.addHealthCheckTarget(
-      'whisper_worker3',
-      'http://192.168.0.100:8002/health',
-    );
-    this.addHealthCheckTarget(
-      'whisper_worker4',
-      'http://192.168.0.100:8003/health',
-    );
-  }
+    this.wispherWorkers.set('whisper_worker1', {
+      url: 'http://192.168.0.100:8000/health',
+      lastCheck: 0,
+      isHealthy: true,
+    });
 
-  addHealthCheckTarget(name: string, url: string) {
-    this.healthChecks.set(name, {
-      url,
+    this.wispherWorkers.set('whisper_worker2', {
+      url: 'http://192.168.0.100:8001/health',
+      lastCheck: 0,
+      isHealthy: true,
+    });
+
+    this.wispherWorkers.set('whisper_worker3', {
+      url: 'http://192.168.0.100:8002/health',
+      lastCheck: 0,
+      isHealthy: true,
+    });
+
+    this.wispherWorkers.set('whisper_worker4', {
+      url: 'http://192.168.0.100:8003/health',
       lastCheck: 0,
       isHealthy: true,
     });
   }
 
-  private async checkHealth(): Promise<boolean> {
-    const now = Date.now();
-    let anyHealthy = false;
-
-    for (const [name, target] of this.healthChecks) {
-      if (now - target.lastCheck < this.HEALTH_CHECK_INTERVAL) {
-        if (target.isHealthy) anyHealthy = true;
-        continue;
-      }
-
+  async addHealthCheckTarget() {
+    for (const [name, target] of this.wispherWorkers) {
       try {
         const response = await fetch(target.url);
         target.isHealthy = response.ok;
-        target.lastCheck = now;
-        if (target.isHealthy) anyHealthy = true;
+        target.lastCheck = Date.now();
+        this.healthChecks.set(name, target);
       } catch (error) {
         target.isHealthy = false;
-        target.lastCheck = now;
+        target.lastCheck = Date.now();
+        this.healthChecks.set(name, target);
       }
     }
 
-    return anyHealthy;
+    this.workersHealth = Array.from(this.healthChecks.values()).some(
+      (target) => target.isHealthy,
+    );
   }
 
   private getQueue(key: string): Queue {
@@ -82,8 +77,7 @@ export class QueueService {
   }
 
   async addJob(key: string, data: AudioJobDto | WhisperResultDto) {
-    const isHealthy = await this.checkHealth();
-    if (!isHealthy) {
+    if (!this.workersHealth) {
       throw new Error('Service is not healthy');
     }
 
