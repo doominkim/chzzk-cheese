@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue, Job } from 'bull';
 import { AudioJobDto, WhisperResultDto } from './dto/audio.dto';
+import { debounce } from 'rxjs';
 
 interface HealthCheckTarget {
   url: string;
@@ -91,9 +92,9 @@ export class QueueService {
       key === 'audio-processing' ? 'process-audio' : 'process-whisper';
     const job = await queue.add(jobName, data, {
       attempts: 1,
-      removeOnComplete: false,
-      removeOnFail: false,
-      timeout: 500 * 60 * 10, // 10 minutes
+      removeOnComplete: true,
+      removeOnFail: true,
+      timeout: 100 * 60 * 10, // 10 minutes
     });
     return job;
   }
@@ -184,8 +185,19 @@ export class QueueService {
 
   async cleanJobs(key: string) {
     const queue = this.getQueue(key);
-    await queue.clean(0, 'completed');
-    await queue.clean(0, 'failed');
+    const oneHourAgo = Date.now() - 1000 * 60 * 60; // 1시간 전
+    const tenMinutesAgo = Date.now() - 100 * 60 * 10; // 10분 전
+
+    // 완료된 작업 중 1시간 이상 된 것 삭제
+    await queue.clean(oneHourAgo, 'completed');
+    // 실패한 작업 중 1시간 이상 된 것 삭제
+    await queue.clean(oneHourAgo, 'failed');
+    // 실행 중인 작업 중 1시간 이상 된 것 삭제
+    await queue.clean(oneHourAgo, 'active');
+    // 대기 중인 작업 중 1시간 이상 된 것 삭제
+    await queue.clean(tenMinutesAgo, 'wait');
+    // 지연된 작업 중 1시간 이상 된 것 삭제
+    await queue.clean(tenMinutesAgo, 'delayed');
   }
 
   async pauseQueue(key: string) {

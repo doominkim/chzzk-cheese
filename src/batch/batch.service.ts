@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { ChannelLiveCategoryDto } from 'src/channel/dtos/channel-live-category.dto';
 import { ChannelLiveDto } from 'src/channel/dtos/channel-live.dto';
 import { ChannelDto } from 'src/channel/dtos/channel.dto';
@@ -24,6 +24,7 @@ import { GenerateChannelChatLogDto } from 'src/channel/dtos/generate-channel-cat
 import { DataSource } from 'typeorm';
 import { StreamService } from 'src/stream/stream.service';
 import { DatabasePartitionInitializer } from 'src/common/bootstrap/partition-initializer';
+import { QueueService } from 'src/queue/queue.service';
 @Injectable()
 export class BatchService {
   private readonly logger = new Logger(BatchService.name);
@@ -39,6 +40,7 @@ export class BatchService {
     private dataSource: DataSource,
     private streamService: StreamService,
     private partitionInitializer: DatabasePartitionInitializer,
+    private queueService: QueueService,
   ) {
     this.chzzkModules = new Map<string, ChzzkModule>();
   }
@@ -283,5 +285,10 @@ export class BatchService {
   @Cron('0 0 25 * *')
   async prepareNextMonthPartitions() {
     await this.partitionInitializer.onModuleInit();
+  }
+
+  @Cron(CronExpression.EVERY_MINUTE)
+  async cleanOldJobs() {
+    await this.queueService.cleanJobs('audio-processing');
   }
 }
