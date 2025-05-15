@@ -10,7 +10,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "cross-env NODE_ENV=dev nest start --debug --watch",
-    "start:dev-batch": "cross-env NODE_ENV=dev IS_BATCH=true nest start --debug --watch",
+    "start:dev-batch": "cross-env NODE_ENV=dev IS_BATCH=true nest start --port 3001 --watch",
     "start:debug": "nest start --debug --watch",
     "start:debug-batch": "nest start --debug --watch --batch",
     "start:prod": "node dist/src/main.js",

@@ -307,10 +307,9 @@ export class BatchService {
     await this.queueService.cleanJobs('audio-processing');
   }
 
-  @Cron(CronExpression.EVERY_MINUTE, {
+  @Cron(CronExpression.EVERY_10_SECONDS, {
     name: 'checkWhisperWorkerHealth',
   })
-  @BatchOnly()
   async checkWhisperWorkerHealth() {
     await this.queueService.addHealthCheckTarget();
   }

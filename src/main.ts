@@ -52,6 +52,7 @@ async function bootstrap() {
     join(__dirname, '..', 'node_modules/@bull-board/ui/dist'),
   );
 
-  await app.listen(3000);
+  const port = process.env.IS_BATCH ? 3001 : 3000;
+  await app.listen(port);
 }
 bootstrap();
