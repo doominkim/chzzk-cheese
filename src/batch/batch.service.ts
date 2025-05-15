@@ -25,6 +25,7 @@ import { DataSource } from 'typeorm';
 import { StreamService } from 'src/stream/stream.service';
 import { DatabasePartitionInitializer } from 'src/common/bootstrap/partition-initializer';
 import { QueueService } from 'src/queue/queue.service';
+import { BatchOnly } from 'src/common/decorators/batch-only.decorator';
 @Injectable()
 export class BatchService {
   private readonly logger = new Logger(BatchService.name);
@@ -45,10 +46,13 @@ export class BatchService {
     this.chzzkModules = new Map<string, ChzzkModule>();
   }
 
-  @Cron('0 */1 * * * *', {
+  @Cron(CronExpression.EVERY_MINUTE, {
     name: 'trackingChannelChats',
   })
+  @BatchOnly()
   async trackingChannelChats() {
+    if (!process.env.IS_BATCH) return;
+
     const findChannelDto = new FindChannelDto();
     findChannelDto.openLive = true;
     findChannelDto.isChatCollected = true;
@@ -100,10 +104,13 @@ export class BatchService {
     }
   }
 
-  @Cron('0 */1 * * * *', {
+  @Cron(CronExpression.EVERY_MINUTE, {
     name: 'trackingChannelAudioAndImage',
   })
+  @BatchOnly()
   async trackingChannelAudioAndImage() {
+    if (!process.env.IS_BATCH) return;
+
     const findChannelDto = new FindChannelDto();
     findChannelDto.openLive = true;
     findChannelDto.isChatCollected = true;
@@ -115,10 +122,13 @@ export class BatchService {
     }
   }
 
-  @Cron('0 */1 * * * *', {
+  @Cron(CronExpression.EVERY_MINUTE, {
     name: 'trackingChannels',
   })
+  @BatchOnly()
   async trackingChannels() {
+    if (!process.env.IS_BATCH) return;
+
     try {
       const findChannelDto = new FindChannelDto();
       const channels = await this.channelService.findChannelsForBatch(
@@ -282,17 +292,25 @@ export class BatchService {
     );
   }
 
-  @Cron('0 0 25 * *')
+  @Cron('0 0 25 * *', {
+    name: 'prepareNextMonthPartitions',
+  })
   async prepareNextMonthPartitions() {
     await this.partitionInitializer.onModuleInit();
   }
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_MINUTE, {
+    name: 'cleanOldJobs',
+  })
+  @BatchOnly()
   async cleanOldJobs() {
     await this.queueService.cleanJobs('audio-processing');
   }
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @Cron(CronExpression.EVERY_MINUTE, {
+    name: 'checkWhisperWorkerHealth',
+  })
+  @BatchOnly()
   async checkWhisperWorkerHealth() {
     await this.queueService.addHealthCheckTarget();
   }
