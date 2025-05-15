@@ -89,6 +89,7 @@ export class QueueService {
       removeOnComplete: false,
       removeOnFail: false,
       timeout: 100 * 60 * 10, // 10 minutes
+      jobId: `${jobName}_${data.channelId}_${data.liveId}_${Date.now()}`, // unique job ID
     });
     return job;
   }
