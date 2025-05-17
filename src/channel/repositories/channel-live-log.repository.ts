@@ -1,8 +1,8 @@
 import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { GenerateChannelLiveLogDto } from '../dtos/channel-live-log.dto copy';
 import { ChannelLiveLog } from '../entities/channel-live-log.entity';
+import { GenerateChannelLiveLogDto } from '../dtos/generate-channel-live-log.dto';
 @Injectable()
 export class ChannelLiveLogRepository {
   constructor(

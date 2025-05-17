@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ChannelLiveLogRepository } from '../repositories/channel-live-log.repository';
-import { GenerateChannelLiveLogDto } from '../dtos/channel-live-log.dto copy';
+import { GenerateChannelLiveLogDto } from '../dtos/generate-channel-live-log.dto';
 
 @Injectable()
 export class ChannelLiveLogService {
