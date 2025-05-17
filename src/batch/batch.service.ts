@@ -46,7 +46,7 @@ export class BatchService {
     this.chzzkModules = new Map<string, ChzzkModule>();
   }
 
-  @Cron(CronExpression.EVERY_MINUTE, {
+  @Cron(CronExpression.EVERY_10_SECONDS, {
     name: 'trackingChannelChats',
   })
   @BatchOnly()
@@ -94,7 +94,7 @@ export class BatchService {
                 manager,
               );
             });
-          }, 60000);
+          }, 5000);
         } catch (e) {
           this.logger.error(e);
           // 에러가 나는 경우 배치 Map에서 delete
