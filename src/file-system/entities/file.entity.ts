@@ -58,9 +58,9 @@ export class File extends CoreHardEntity {
         "mimeType" VARCHAR NOT NULL,
         "metadata" JSONB,
         "isPublic" BOOLEAN DEFAULT false,
-        "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
-        "updatedAt" TIMESTAMP NOT NULL DEFAULT now(),
-        "deletedAt" TIMESTAMP,
+        "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+        "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+        "deletedAt" TIMESTAMPTZ,
         "analyzed" BOOLEAN DEFAULT false
         ) PARTITION BY RANGE ("createdAt");
         END IF;

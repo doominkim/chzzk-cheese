@@ -55,9 +55,9 @@ export class ChannelChatLog extends CoreHardEntity {
 				  "nickname" VARCHAR(100),
 				  "profile" JSONB,
 				  "extras" JSONB,
-				  "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
-          "updatedAt" TIMESTAMP NOT NULL DEFAULT now(),
-          "deletedAt" TIMESTAMP,
+				  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+          "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+          "deletedAt" TIMESTAMPTZ,
           "channelId" INT NOT NULL,
           FOREIGN KEY ("channelId") REFERENCES "channel"("id")
 				) PARTITION BY RANGE ("createdAt");
