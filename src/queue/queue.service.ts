@@ -8,6 +8,7 @@ interface HealthCheckTarget {
   url: string;
   lastCheck: number;
   isHealthy: boolean;
+  responseTime: number;
 }
 
 @Injectable()
@@ -25,37 +26,50 @@ export class QueueService {
       url: 'http://192.168.0.100:8000/health',
       lastCheck: 0,
       isHealthy: true,
+      responseTime: 0,
     });
 
     this.wispherWorkers.set('whisper_worker2', {
       url: 'http://192.168.0.100:8001/health',
       lastCheck: 0,
       isHealthy: true,
+      responseTime: 0,
     });
 
     this.wispherWorkers.set('whisper_worker3', {
       url: 'http://192.168.0.100:8002/health',
       lastCheck: 0,
       isHealthy: true,
+      responseTime: 0,
     });
 
     this.wispherWorkers.set('whisper_worker4', {
       url: 'http://192.168.0.100:8003/health',
       lastCheck: 0,
       isHealthy: true,
+      responseTime: 0,
     });
+  }
+
+  getWorkersHealth(): Map<string, HealthCheckTarget> {
+    return this.healthChecks;
   }
 
   async addHealthCheckTarget() {
     for (const [name, target] of this.wispherWorkers) {
       try {
+        const startTime = Date.now();
         const response = await fetch(target.url);
+        const endTime = Date.now();
+
         target.isHealthy = response.ok;
-        target.lastCheck = Date.now();
+        target.lastCheck = endTime;
+        target.responseTime = endTime - startTime;
         this.healthChecks.set(name, target);
       } catch (error) {
         target.isHealthy = false;
         target.lastCheck = Date.now();
+        target.responseTime = -1; // 에러 발생 시 -1로 설정
         this.healthChecks.set(name, target);
       }
     }

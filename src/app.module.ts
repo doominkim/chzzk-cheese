@@ -16,6 +16,7 @@ import { DatabasePartitionInitializer } from './common/bootstrap/partition-initi
 import { MediaAiHubModule } from './media-ai-hub/media-ai-hub.module';
 import { QueueModule } from './queue/queue.module';
 import { BullBoardAppModule } from './queue/bull-board.module';
+import { HealthModule } from './health/health.module';
 
 const envValidationSchema = Joi.object({
   PORT: Joi.number().required(),
@@ -70,6 +71,7 @@ const serviceModule = [
   MediaAiHubModule,
   QueueModule,
   BullBoardAppModule,
+  HealthModule,
 ];
 @Module({
   imports: [...conifgModule, ...serviceModule],
