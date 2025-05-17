@@ -7,6 +7,8 @@ import { GetDonationRankDto } from '../dtos/get-donation-rank.dto';
 import { GetDonationDto } from '../dtos/get-donation.dto';
 import { GetActiveUserRankDto } from '../dtos/get-most-active-user-rank.dto';
 import { ChannelChatLogService } from '../services/channel-chat-log.service';
+import { ChannelLiveTranscriptService } from '../services/channel-live-transcript.service';
+import { FindChannelLiveTranscriptDto } from '../dtos/find-channel-live-transcript.dto';
 
 @ApiTags('채널 관리')
 @Controller('channel')
@@ -14,6 +16,7 @@ export class ChannelController {
   constructor(
     private channelService: ChannelService,
     private channelChatLogService: ChannelChatLogService,
+    private channelLiveTranscriptService: ChannelLiveTranscriptService,
   ) {}
 
   @ApiProperty({
@@ -89,5 +92,16 @@ export class ChannelController {
     return await this.channelChatLogService.getActiveUserRank(
       getActiveUserRank,
     );
+  }
+
+  @Get(':uuid/transcript')
+  @ApiProperty({
+    description: '채널 트랜스크립트 조회',
+  })
+  async getTranscripts(
+    @Param('uuid') uuid: string,
+    @Query() findDto: FindChannelLiveTranscriptDto,
+  ) {
+    return await this.channelLiveTranscriptService.find(uuid, findDto);
   }
 }
