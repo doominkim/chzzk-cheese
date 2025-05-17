@@ -14,19 +14,20 @@ export enum SortOrder {
 }
 
 export class FindChannelLiveTranscriptDto {
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, default: 0 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  limit?: number;
+  offset?: number = 0;
+
+  @ApiProperty({ required: false, default: 20 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  limit?: number = 20;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   liveId?: string;
-
-  @ApiProperty({ required: false, enum: SortOrder, default: SortOrder.DESC })
-  @IsOptional()
-  @IsEnum(SortOrder)
-  sort?: SortOrder;
 }

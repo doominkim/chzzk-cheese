@@ -37,12 +37,27 @@ export class ChannelLiveTranscriptRepository {
       });
     }
 
-    if (findDto.limit) {
-      query.take(findDto.limit);
+    const total = await query.getCount();
+
+    query.orderBy('clt.createdAt', 'DESC');
+
+    if (findDto.offset) {
+      query.skip(findDto.offset);
     }
 
-    query.orderBy('clt.createdAt', findDto.sort || SortOrder.DESC);
+    query.take(findDto.limit || 20);
 
-    return await query.getMany();
+    const items = await query.getMany();
+
+    const sortedItems = items.sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+
+    return {
+      items: sortedItems,
+      total,
+      hasMore: (findDto.offset || 0) + (findDto.limit || 20) < total,
+    };
   }
 }
