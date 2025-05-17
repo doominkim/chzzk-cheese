@@ -9,6 +9,7 @@ import { GetActiveUserRankDto } from '../dtos/get-most-active-user-rank.dto';
 import { ChannelChatLogService } from '../services/channel-chat-log.service';
 import { ChannelLiveTranscriptService } from '../services/channel-live-transcript.service';
 import { FindChannelLiveTranscriptDto } from '../dtos/find-channel-live-transcript.dto';
+import { FindChannelChatDto } from '../dtos/find-channel-chat.dto';
 
 @ApiTags('채널 관리')
 @Controller('channel')
@@ -103,5 +104,21 @@ export class ChannelController {
     @Query() findDto: FindChannelLiveTranscriptDto,
   ) {
     return await this.channelLiveTranscriptService.find(uuid, findDto);
+  }
+
+  @Get(':uuid/chat/:chatChannelId')
+  @ApiProperty({
+    description: '채널 채팅 조회',
+  })
+  async getChannelChats(
+    @Param('uuid') uuid: string,
+    @Param('chatChannelId') chatChannelId: string,
+    @Query() findDto: FindChannelChatDto,
+  ) {
+    return await this.channelChatLogService.findChats(
+      uuid,
+      chatChannelId,
+      findDto,
+    );
   }
 }

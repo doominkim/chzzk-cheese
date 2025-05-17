@@ -7,6 +7,8 @@ import { GetDonationRankDto } from '../dtos/get-donation-rank.dto';
 import { GetDonationDto } from '../dtos/get-donation.dto';
 import { GetActiveUserRankDto } from '../dtos/get-most-active-user-rank.dto';
 import { Channel } from '../entities/channel.entity';
+import { FindChannelChatDto } from '../dtos/find-channel-chat.dto';
+import { ChannelLive } from '../entities/channel-live.entity';
 
 @Injectable()
 export class ChannelChatLogRepository {
@@ -167,5 +169,59 @@ export class ChannelChatLogRepository {
       .addSelect('count(*)::int', 'chatCount');
 
     return await query.getRawMany();
+  }
+
+  async findChats(
+    uuid: string,
+    chatChannelId: string,
+    findDto: FindChannelChatDto,
+  ) {
+    const { limit, from, to, message, userIdHash, nickname, chatType } =
+      findDto;
+
+    const query = this.repository
+      .createQueryBuilder('ccl')
+      .leftJoinAndMapOne('ccl.channel', Channel, 'c', 'ccl.channelId = c.id')
+      .where('c.uuid = :uuid', { uuid })
+      .andWhere('ccl.chatChannelId = :chatChannelId', { chatChannelId });
+
+    if (from) {
+      query.andWhere('ccl.createdAt >= :from', { from });
+    }
+
+    if (to) {
+      query.andWhere('ccl.createdAt <= :to', { to });
+    }
+
+    if (message) {
+      query.andWhere('ccl.message LIKE :message', { message });
+    }
+
+    if (userIdHash) {
+      query.andWhere('ccl.userIdHash = :userIdHash', { userIdHash });
+    }
+
+    if (nickname) {
+      query.andWhere('ccl.nickname = :nickname', { nickname });
+    }
+
+    if (chatType) {
+      query.andWhere('ccl.chatType = :chatType', { chatType });
+    }
+
+    query.orderBy('ccl.createdAt', 'DESC');
+
+    const pageSize = Math.min(limit || 20, 40);
+    query.limit(pageSize);
+
+    const [items, total] = await query.getManyAndCount();
+
+    const sortedItems = items.reverse();
+
+    return {
+      items: sortedItems,
+      total,
+      hasMore: items.length === pageSize,
+    };
   }
 }

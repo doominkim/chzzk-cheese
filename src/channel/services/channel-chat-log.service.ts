@@ -5,12 +5,26 @@ import { GetDonationRankDto } from '../dtos/get-donation-rank.dto';
 import { GetDonationDto } from '../dtos/get-donation.dto';
 import { GetActiveUserRankDto } from '../dtos/get-most-active-user-rank.dto';
 import { EntityManager } from 'typeorm';
+import { FindChannelChatDto } from '../dtos/find-channel-chat.dto';
+import { ChannelChatLog } from '../entities/channel-chat-log.entity';
 
 @Injectable()
 export class ChannelChatLogService {
   private logger = new Logger(ChannelChatLogService.name);
 
   constructor(private channelChatLogRepository: ChannelChatLogRepository) {}
+
+  async findChats(
+    uuid: string,
+    chatChannelId: string,
+    query: FindChannelChatDto,
+  ): Promise<{ items: ChannelChatLog[]; total: number; hasMore: boolean }> {
+    return await this.channelChatLogRepository.findChats(
+      uuid,
+      chatChannelId,
+      query,
+    );
+  }
 
   async generateChannelChatLog(
     generateChannelChatLogDto: GenerateChannelChatLogDto,
