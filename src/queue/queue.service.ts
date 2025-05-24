@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue, Job } from 'bull';
 import { AudioJobDto, WhisperResultDto } from './dto/audio.dto';
-import { async, debounce } from 'rxjs';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 interface HealthCheckTarget {
   url: string;
@@ -12,11 +12,13 @@ interface HealthCheckTarget {
 }
 
 @Injectable()
-export class QueueService {
+export class QueueService implements OnModuleInit {
+  private readonly logger = new Logger(QueueService.name);
   private healthChecks: Map<string, HealthCheckTarget> = new Map();
   private wispherWorkers: Map<string, HealthCheckTarget> = new Map();
   private workersHealth = false;
   private readonly HEALTH_CHECK_INTERVAL = 60 * 1000;
+  private readonly MAX_JOBS_TO_CHECK = 100; // 메모리 절약을 위해 검사할 최대 작업 수
 
   constructor(
     @InjectQueue('audio-processing') private readonly audioQueue: Queue,
@@ -51,6 +53,39 @@ export class QueueService {
     });
   }
 
+  async onModuleInit() {
+    // 시작 시 오래된 작업들 정리
+    await this.cleanAllQueues();
+    this.logger.log('Queue service initialized and cleaned');
+  }
+
+  // 5분마다 큐 정리
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async handleQueueCleanup() {
+    try {
+      await this.cleanAllQueues();
+      // 메모리 정리 강제 실행
+      if (global.gc) {
+        global.gc();
+        this.logger.debug('Garbage collection executed');
+      }
+    } catch (error) {
+      this.logger.error('Queue cleanup failed', error);
+    }
+  }
+
+  private async cleanAllQueues() {
+    try {
+      await Promise.all([
+        this.cleanJobs('audio-processing'),
+        this.cleanJobs('whisper-processing'),
+      ]);
+      this.logger.debug('All queues cleaned successfully');
+    } catch (error) {
+      this.logger.error('Failed to clean queues', error);
+    }
+  }
+
   getWorkersHealth(): Map<string, HealthCheckTarget> {
     return this.healthChecks;
   }
@@ -69,7 +104,16 @@ export class QueueService {
         (async () => {
           try {
             const startTime = now;
-            const response = await fetch(target.url);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30초 타임아웃
+
+            const response = await fetch(target.url, {
+              signal: controller.signal,
+              method: 'GET',
+              headers: { 'Content-Type': 'application/json' },
+            });
+
+            clearTimeout(timeoutId);
             const endTime = Date.now();
 
             target.isHealthy = response.ok;
@@ -114,8 +158,8 @@ export class QueueService {
       key === 'audio-processing' ? 'process-audio' : 'process-whisper';
     const job = await queue.add(jobName, data, {
       attempts: 1,
-      removeOnComplete: false,
-      removeOnFail: false,
+      removeOnComplete: 5, // 완료된 작업 5개만 유지
+      removeOnFail: 5, // 실패한 작업 5개만 유지
       timeout: 100 * 60 * 10, // 10 minutes
       jobId: `${jobName}_${data.channelId}_${data.liveId}_${Date.now()}`, // unique job ID
     });
@@ -208,19 +252,25 @@ export class QueueService {
 
   async cleanJobs(key: string) {
     const queue = this.getQueue(key);
-    const oneHourAgo = Date.now() - 1000 * 60 * 60; // 1시간 전
-    const tenMinutesAgo = Date.now() - 100 * 60 * 10; // 10분 전
+    const thirtyMinutesAgo = Date.now() - 30 * 60 * 1000; // 30분 전
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000; // 5분 전
 
-    // 완료된 작업 중 1시간 이상 된 것 삭제
-    await queue.clean(oneHourAgo, 'completed');
-    // 실패한 작업 중 1시간 이상 된 것 삭제
-    await queue.clean(oneHourAgo, 'failed');
-    // 실행 중인 작업 중 1시간 이상 된 것 삭제
-    await queue.clean(oneHourAgo, 'active');
-    // 대기 중인 작업 중 1시간 이상 된 것 삭제
-    await queue.clean(tenMinutesAgo, 'wait');
-    // 지연된 작업 중 1시간 이상 된 것 삭제
-    await queue.clean(tenMinutesAgo, 'delayed');
+    try {
+      // 완료된 작업 중 30분 이상 된 것 삭제
+      await queue.clean(thirtyMinutesAgo, 'completed', 0);
+      // 실패한 작업 중 30분 이상 된 것 삭제
+      await queue.clean(thirtyMinutesAgo, 'failed', 0);
+      // 실행 중인 작업 중 30분 이상 된 것 삭제
+      await queue.clean(thirtyMinutesAgo, 'active', 0);
+      // 대기 중인 작업 중 5분 이상 된 것 삭제
+      await queue.clean(fiveMinutesAgo, 'wait', 0);
+      // 지연된 작업 중 5분 이상 된 것 삭제
+      await queue.clean(fiveMinutesAgo, 'delayed', 0);
+
+      this.logger.debug(`Queue ${key} cleaned successfully`);
+    } catch (error) {
+      this.logger.error(`Failed to clean queue ${key}`, error);
+    }
   }
 
   async pauseQueue(key: string) {
@@ -237,8 +287,25 @@ export class QueueService {
     key: 'audio-processing' | 'whisper-processing',
     filePath: string,
   ): Promise<boolean> {
-    const queue = this.getQueue(key);
-    const jobs = await queue.getJobs(['active', 'waiting']);
-    return jobs.some((job) => job.data.filePath === filePath);
+    try {
+      const queue = this.getQueue(key);
+      // 메모리 절약을 위해 검사할 작업 수 제한
+      const jobs = await queue.getJobs(
+        ['active', 'waiting'],
+        0,
+        this.MAX_JOBS_TO_CHECK,
+      );
+
+      // 큰 배열 순회 대신 조기 반환 사용
+      for (const job of jobs) {
+        if (job.data?.filePath === filePath) {
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      this.logger.error(`Error checking job in queue: ${error.message}`);
+      return false;
+    }
   }
 }

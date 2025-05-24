@@ -30,6 +30,7 @@ import { BatchOnly } from 'src/common/decorators/batch-only.decorator';
 export class BatchService {
   private readonly logger = new Logger(BatchService.name);
   private readonly chzzkModules: Map<string, ChzzkModule>;
+  private readonly MAX_MODULES = 100; // 최대 모듈 수 제한
 
   constructor(
     private chzzkService: ChzzkService,
@@ -46,12 +47,31 @@ export class BatchService {
     this.chzzkModules = new Map<string, ChzzkModule>();
   }
 
+  // Map 크기 관리 메서드
+  private manageModulesSize() {
+    if (this.chzzkModules.size > this.MAX_MODULES) {
+      const keysToDelete = Array.from(this.chzzkModules.keys()).slice(0, 10);
+      keysToDelete.forEach((key) => {
+        this.chzzkModules.delete(key);
+      });
+      this.logger.debug(`Cleaned up ${keysToDelete.length} old modules`);
+
+      // 강제 가비지 컬렉션
+      if (global.gc) {
+        global.gc();
+      }
+    }
+  }
+
   @Cron(CronExpression.EVERY_10_SECONDS, {
     name: 'trackingChannelChats',
   })
   @BatchOnly()
   async trackingChannelChats() {
     if (!process.env.IS_BATCH) return;
+
+    // 주기적으로 Map 크기 관리
+    this.manageModulesSize();
 
     const findChannelDto = new FindChannelDto();
     findChannelDto.openLive = true;

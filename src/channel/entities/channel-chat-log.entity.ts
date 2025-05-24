@@ -83,6 +83,7 @@ export class ChannelChatLog extends CoreHardEntity {
       CREATE INDEX IF NOT EXISTS idx_${partitionName}_chatChannelId ON "${partitionName}" ("chatChannelId");
       CREATE INDEX IF NOT EXISTS idx_${partitionName}_userIdHash ON "${partitionName}" ("userIdHash");
       CREATE INDEX IF NOT EXISTS idx_${partitionName}_nickname ON "${partitionName}" ("nickname");
+      CREATE INDEX IF NOT EXISTS idx_${partitionName}_createdAt ON "${partitionName}" ("createdAt");
     `;
   }
 }

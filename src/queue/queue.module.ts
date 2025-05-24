@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { QueueService } from './queue.service';
 import { QueueController } from './queue.controller';
 import { BullBoardModule } from '@bull-board/nestjs';
@@ -11,6 +12,7 @@ import { FileSystemModule } from 'src/file-system/file-system.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
