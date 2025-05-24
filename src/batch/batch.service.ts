@@ -138,7 +138,11 @@ export class BatchService {
 
     for (const channel of channels) {
       const { uuid } = channel;
-      await this.streamService.startRecording(uuid);
+      try {
+        await this.streamService.startRecording(uuid);
+      } catch (e) {
+        this.logger.error(e);
+      }
     }
   }
 

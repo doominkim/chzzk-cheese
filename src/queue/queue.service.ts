@@ -56,6 +56,8 @@ export class QueueService implements OnModuleInit {
   async onModuleInit() {
     // 시작 시 오래된 작업들 정리
     await this.cleanAllQueues();
+    await this.addHealthCheckTarget();
+
     this.logger.log('Queue service initialized and cleaned');
   }
 
