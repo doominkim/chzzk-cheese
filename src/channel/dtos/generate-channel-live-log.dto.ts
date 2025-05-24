@@ -1,5 +1,5 @@
 import { PickType } from '@nestjs/swagger';
-import { ChannelLiveLogDto } from './channel-live-log.dto';
+import { ChannelLiveLogDto } from 'src/channel/dtos/channel-live-log.dto';
 
 export class GenerateChannelLiveLogDto extends PickType(ChannelLiveLogDto, [
   'liveTitle',

@@ -56,23 +56,37 @@ export class QueueService {
   }
 
   async addHealthCheckTarget() {
-    for (const [name, target] of this.wispherWorkers) {
-      try {
-        const startTime = Date.now();
-        const response = await fetch(target.url);
-        const endTime = Date.now();
+    const now = Date.now();
+    const promises = [];
 
-        target.isHealthy = response.ok;
-        target.lastCheck = endTime;
-        target.responseTime = endTime - startTime;
-        this.healthChecks.set(name, target);
-      } catch (error) {
-        target.isHealthy = false;
-        target.lastCheck = Date.now();
-        target.responseTime = -1; // 에러 발생 시 -1로 설정
-        this.healthChecks.set(name, target);
+    for (const [name, target] of this.wispherWorkers) {
+      // 마지막 체크 후 HEALTH_CHECK_INTERVAL 시간이 지났는지 확인
+      if (now - target.lastCheck < this.HEALTH_CHECK_INTERVAL) {
+        continue;
       }
+
+      promises.push(
+        (async () => {
+          try {
+            const startTime = now;
+            const response = await fetch(target.url);
+            const endTime = Date.now();
+
+            target.isHealthy = response.ok;
+            target.lastCheck = endTime;
+            target.responseTime = endTime - startTime;
+            this.healthChecks.set(name, target);
+          } catch (error) {
+            target.isHealthy = false;
+            target.lastCheck = now;
+            target.responseTime = -1;
+            this.healthChecks.set(name, target);
+          }
+        })(),
+      );
     }
+
+    await Promise.all(promises);
 
     this.workersHealth = Array.from(this.healthChecks.values()).some(
       (target) => target.isHealthy,

@@ -1,5 +1,5 @@
 import { PickType } from '@nestjs/swagger';
-import { ChannelLiveCategoryDto } from './channel-live-category.dto';
+import { ChannelLiveCategoryDto } from 'src/channel/dtos/channel-live-category.dto';
 
 export class GenerateChannelLiveCategoryDto extends PickType(
   ChannelLiveCategoryDto,
