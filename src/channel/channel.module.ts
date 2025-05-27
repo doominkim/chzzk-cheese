@@ -20,6 +20,7 @@ import { ChannelChatLogService } from './services/channel-chat-log.service';
 import { ChannelLiveTranscript } from './entities/channel-live-transcript.entity';
 import { ChannelLiveTranscriptService } from './services/channel-live-transcript.service';
 import { ChannelLiveTranscriptRepository } from './repositories/channel-live-transcript.repository';
+import { ChatController } from './controllers/chat.controller';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -32,7 +33,7 @@ import { ChannelLiveTranscriptRepository } from './repositories/channel-live-tra
     ]),
     ChzzkModule,
   ],
-  controllers: [ChannelController],
+  controllers: [ChannelController, ChatController],
   providers: [
     ChannelService,
     ChannelRepository,

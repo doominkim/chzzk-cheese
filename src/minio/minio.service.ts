@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  HeadBucketCommand,
+} from '@aws-sdk/client-s3';
 import { ConfigService } from '@nestjs/config';
 import { join } from 'path';
 import { readdirSync, readFileSync } from 'fs';
@@ -9,6 +13,9 @@ export class MinioService {
   private readonly logger = new Logger(MinioService.name);
   private readonly client: S3Client;
   private readonly bucketName: string;
+  private lastHealthCheck = 0;
+  private isHealthy = true;
+  private readonly HEALTH_CHECK_INTERVAL = 30 * 1000; // 30초
 
   constructor(private readonly configService: ConfigService) {
     this.client = new S3Client({
@@ -115,6 +122,31 @@ export class MinioService {
     } catch (error) {
       this.logger.error(`Error uploading stream files: ${error.message}`);
       throw error;
+    }
+  }
+
+  async checkHealth(): Promise<boolean> {
+    const now = Date.now();
+
+    // 30초 이내에 체크했다면 캐시된 결과 반환
+    if (now - this.lastHealthCheck < this.HEALTH_CHECK_INTERVAL) {
+      return this.isHealthy;
+    }
+
+    try {
+      const command = new HeadBucketCommand({
+        Bucket: this.bucketName,
+      });
+
+      await this.client.send(command);
+      this.isHealthy = true;
+      this.lastHealthCheck = now;
+      return true;
+    } catch (error) {
+      this.isHealthy = false;
+      this.lastHealthCheck = now;
+      this.logger.error(`MinIO health check failed: ${error.message}`);
+      return false;
     }
   }
 }

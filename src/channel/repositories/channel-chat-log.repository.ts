@@ -9,6 +9,7 @@ import { GetActiveUserRankDto } from '../dtos/get-most-active-user-rank.dto';
 import { Channel } from '../entities/channel.entity';
 import { FindChannelChatDto } from '../dtos/find-channel-chat.dto';
 import { ChannelLive } from '../entities/channel-live.entity';
+import { FindChatDto } from '../dtos/find-chat.dto';
 
 @Injectable()
 export class ChannelChatLogRepository {
@@ -184,6 +185,71 @@ export class ChannelChatLogRepository {
       .leftJoinAndMapOne('ccl.channel', Channel, 'c', 'ccl.channelId = c.id')
       .where('c.uuid = :uuid', { uuid })
       .andWhere('ccl.chatChannelId = :chatChannelId', { chatChannelId });
+
+    if (from) {
+      query.andWhere('ccl.createdAt >= :from', { from });
+    }
+
+    if (to) {
+      query.andWhere('ccl.createdAt <= :to', { to });
+    }
+
+    if (message) {
+      query.andWhere('ccl.message LIKE :message', { message });
+    }
+
+    if (userIdHash) {
+      query.andWhere('ccl.userIdHash = :userIdHash', { userIdHash });
+    }
+
+    if (nickname) {
+      query.andWhere('ccl.nickname = :nickname', { nickname });
+    }
+
+    if (chatType) {
+      query.andWhere('ccl.chatType = :chatType', { chatType });
+    }
+
+    query.orderBy('ccl.createdAt', 'DESC');
+
+    const pageSize = Math.min(limit || 20, 40);
+    query.limit(pageSize);
+
+    const [items, total] = await query.getManyAndCount();
+
+    const sortedItems = items.reverse();
+
+    return {
+      items: sortedItems,
+      total,
+      hasMore: items.length === pageSize,
+    };
+  }
+
+  async findChatsV2(findDto: FindChatDto) {
+    const {
+      uuid,
+      chatChannelId,
+      limit,
+      from,
+      to,
+      message,
+      userIdHash,
+      nickname,
+      chatType,
+    } = findDto;
+
+    const query = this.repository
+      .createQueryBuilder('ccl')
+      .leftJoinAndMapOne('ccl.channel', Channel, 'c', 'ccl.channelId = c.id');
+
+    if (uuid) {
+      query.where('c.uuid = :uuid', { uuid });
+    }
+
+    if (chatChannelId) {
+      query.andWhere('ccl.chatChannelId = :chatChannelId', { chatChannelId });
+    }
 
     if (from) {
       query.andWhere('ccl.createdAt >= :from', { from });

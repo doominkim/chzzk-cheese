@@ -24,8 +24,8 @@ import { FileSystemModule } from 'src/file-system/file-system.module';
         },
         defaultJobOptions: {
           attempts: 1,
-          removeOnComplete: true,
-          removeOnFail: true,
+          removeOnComplete: 2,
+          removeOnFail: 2,
         },
       }),
     }),
@@ -33,15 +33,15 @@ import { FileSystemModule } from 'src/file-system/file-system.module';
       {
         name: 'audio-processing',
         defaultJobOptions: {
-          removeOnComplete: true,
-          removeOnFail: true,
+          removeOnComplete: 2,
+          removeOnFail: 2,
         },
       },
       {
         name: 'whisper-processing',
         defaultJobOptions: {
-          removeOnComplete: true,
-          removeOnFail: true,
+          removeOnComplete: 2,
+          removeOnFail: 2,
         },
       },
     ),

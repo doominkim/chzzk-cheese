@@ -61,18 +61,17 @@ export class QueueService implements OnModuleInit {
     this.logger.log('Queue service initialized and cleaned');
   }
 
-  // 5분마다 큐 정리
-  @Cron(CronExpression.EVERY_5_MINUTES)
-  async handleQueueCleanup() {
-    try {
-      await this.cleanAllQueues();
-      // 메모리 정리 강제 실행
-      if (global.gc) {
-        global.gc();
-        this.logger.debug('Garbage collection executed');
-      }
-    } catch (error) {
-      this.logger.error('Queue cleanup failed', error);
+  // 큐 정리 작업 - 더 자주 실행 (1분마다)
+  @Cron('0 * * * * *', {
+    name: 'clean-queues',
+  })
+  async cleanQueues() {
+    await this.cleanJobs('audio-processing');
+    await this.cleanJobs('whisper-processing');
+
+    // 강제 가비지 컬렉션
+    if (global.gc) {
+      global.gc();
     }
   }
 
@@ -254,20 +253,20 @@ export class QueueService implements OnModuleInit {
 
   async cleanJobs(key: string) {
     const queue = this.getQueue(key);
-    const thirtyMinutesAgo = Date.now() - 30 * 60 * 1000; // 30분 전
     const fiveMinutesAgo = Date.now() - 5 * 60 * 1000; // 5분 전
+    const oneMinuteAgo = Date.now() - 1 * 60 * 1000; // 1분 전
 
     try {
-      // 완료된 작업 중 30분 이상 된 것 삭제
-      await queue.clean(thirtyMinutesAgo, 'completed', 0);
-      // 실패한 작업 중 30분 이상 된 것 삭제
-      await queue.clean(thirtyMinutesAgo, 'failed', 0);
-      // 실행 중인 작업 중 30분 이상 된 것 삭제
-      await queue.clean(thirtyMinutesAgo, 'active', 0);
-      // 대기 중인 작업 중 5분 이상 된 것 삭제
-      await queue.clean(fiveMinutesAgo, 'wait', 0);
-      // 지연된 작업 중 5분 이상 된 것 삭제
-      await queue.clean(fiveMinutesAgo, 'delayed', 0);
+      // 완료된 작업 중 5분 이상 된 것 삭제
+      await queue.clean(fiveMinutesAgo, 'completed', 0);
+      // 실패한 작업 중 5분 이상 된 것 삭제
+      await queue.clean(fiveMinutesAgo, 'failed', 0);
+      // 실행 중인 작업 중 5분 이상 된 것 삭제
+      await queue.clean(fiveMinutesAgo, 'active', 0);
+      // 대기 중인 작업 중 1분 이상 된 것 삭제 (더 적극적으로)
+      await queue.clean(oneMinuteAgo, 'wait', 0);
+      // 지연된 작업 중 1분 이상 된 것 삭제
+      await queue.clean(oneMinuteAgo, 'delayed', 0);
 
       this.logger.debug(`Queue ${key} cleaned successfully`);
     } catch (error) {

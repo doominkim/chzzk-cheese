@@ -7,6 +7,7 @@ import { GetActiveUserRankDto } from '../dtos/get-most-active-user-rank.dto';
 import { EntityManager } from 'typeorm';
 import { FindChannelChatDto } from '../dtos/find-channel-chat.dto';
 import { ChannelChatLog } from '../entities/channel-chat-log.entity';
+import { FindChatDto } from '../dtos/find-chat.dto';
 
 @Injectable()
 export class ChannelChatLogService {
@@ -24,6 +25,10 @@ export class ChannelChatLogService {
       chatChannelId,
       query,
     );
+  }
+
+  async findChatsV2(findChatDto: FindChatDto) {
+    return await this.channelChatLogRepository.findChatsV2(findChatDto);
   }
 
   async generateChannelChatLog(

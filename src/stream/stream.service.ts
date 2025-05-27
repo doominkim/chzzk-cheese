@@ -20,6 +20,7 @@ interface ChannelProcesses {
   streamlink: ChildProcess | null;
   audio: ChildProcess | null;
   capture: ChildProcess | null;
+  interval?: NodeJS.Timeout;
 }
 
 @Injectable()
@@ -29,6 +30,11 @@ export class StreamService {
   private readonly maxDirSize = 10 * 1024 * 1024 * 1024; // 10GB
   private readonly channelProcesses: Map<string, ChannelProcesses> = new Map();
   private readonly uploadedFiles: Set<string> = new Set();
+  private readonly processingFiles: Set<string> = new Set(); // 처리 중인 파일 추적
+  private readonly MAX_PROCESSES = 50; // 최대 프로세스 수 제한
+  private readonly MAX_CONCURRENT_UPLOADS = 3; // 동시 업로드 수 제한
+  private readonly UPLOAD_RETRY_COUNT = 3; // 업로드 재시도 횟수
+  private lastErrorLog: number | null = null;
 
   private readonly ERROR_MESSAGES = {
     CHANNEL_NOT_FOUND: '채널을 찾을 수 없습니다.',
@@ -68,6 +74,36 @@ export class StreamService {
     setInterval(() => this.cleanupTempFiles(), 60 * 60 * 1000); // 1시간마다
     // 주기적으로 업로드된 파일 목록 정리
     setInterval(() => this.cleanupUploadedFiles(), 60 * 60 * 1000); // 1시간마다
+    // 주기적으로 프로세스 Map 정리
+    setInterval(() => this.cleanupProcesses(), 30 * 60 * 1000); // 30분마다
+  }
+
+  private cleanupProcesses() {
+    if (this.channelProcesses.size > this.MAX_PROCESSES) {
+      const keysToDelete = Array.from(this.channelProcesses.keys()).slice(
+        0,
+        10,
+      );
+      keysToDelete.forEach((key) => {
+        const processes = this.channelProcesses.get(key);
+        if (
+          processes &&
+          !processes.streamlink &&
+          !processes.audio &&
+          !processes.capture
+        ) {
+          if (processes.interval) {
+            clearInterval(processes.interval);
+          }
+          this.channelProcesses.delete(key);
+        }
+      });
+      this.logger.log(
+        LogLevel.INFO,
+        LogSource.STREAM,
+        'Cleaned up inactive channel processes',
+      );
+    }
   }
 
   private getChannelProcesses(channelId: string): ChannelProcesses {
@@ -76,6 +112,7 @@ export class StreamService {
         streamlink: null,
         audio: null,
         capture: null,
+        interval: undefined,
       });
     }
     return this.channelProcesses.get(channelId)!;
@@ -145,9 +182,7 @@ export class StreamService {
       '-f',
       'segment',
       '-segment_time',
-      '30',
-      '-reset_timestamps',
-      '1',
+      '10',
       '-movflags',
       '+faststart',
       '-write_xing',
@@ -297,8 +332,13 @@ export class StreamService {
         }
       };
 
-      // 10초마다 파일 체크 및 업로드
-      setInterval(checkAndUploadFiles, 10000);
+      // 기존 interval이 있다면 제거
+      if (processes.interval) {
+        clearInterval(processes.interval);
+      }
+
+      // 10초마다 파일 체크 및 업로드 (interval ID 저장)
+      processes.interval = setInterval(checkAndUploadFiles, 10000);
 
       return 'Recording started';
     } catch (error) {
@@ -315,6 +355,12 @@ export class StreamService {
 
     if (!processes) {
       return;
+    }
+
+    // interval 정리
+    if (processes.interval) {
+      clearInterval(processes.interval);
+      processes.interval = undefined;
     }
 
     if (processes.capture) {
@@ -376,10 +422,11 @@ export class StreamService {
 
   private cleanupUploadedFiles() {
     this.uploadedFiles.clear();
+    this.processingFiles.clear(); // 처리 중인 파일 목록도 정리
     this.logger.log(
       LogLevel.INFO,
       LogSource.STREAM,
-      'Cleared uploaded files cache',
+      'Cleared uploaded and processing files cache',
     );
   }
 
@@ -415,30 +462,44 @@ export class StreamService {
         this.isFileComplete(join(channelDir, file)),
       );
 
+      // 동시 업로드 수 제한 - 처리 중인 파일 수가 제한을 초과하면 대기
+      if (this.processingFiles.size >= this.MAX_CONCURRENT_UPLOADS) {
+        this.logger.log(
+          LogLevel.INFO,
+          LogSource.STREAM,
+          `Max concurrent uploads reached (${this.processingFiles.size}/${this.MAX_CONCURRENT_UPLOADS}), skipping this cycle`,
+        );
+        return;
+      }
+
+      // 처리할 파일 수 제한
+      const filesToProcess = completedAudioFiles.slice(
+        0,
+        this.MAX_CONCURRENT_UPLOADS - this.processingFiles.size,
+      );
+
       // 오디오 파일 순차 처리
-      for (const file of completedAudioFiles) {
+      for (const file of filesToProcess) {
         const filePath = join(channelDir, file);
         const objectName = `channels/${channelId}/lives/${liveId}/audios/${file}`;
 
+        // 이미 처리 중인 파일인지 확인
+        if (this.processingFiles.has(objectName)) {
+          continue;
+        }
+
         try {
+          // 처리 시작 표시
+          this.processingFiles.add(objectName);
+
           // DB에서 이미 처리된 파일인지 확인
           const existingFile = await this.fileRepository.findByObjectName(
             objectName,
           );
           if (existingFile) {
-            this.logger.log(
-              LogLevel.INFO,
-              LogSource.STREAM,
-              `File already processed: ${objectName}`,
-            );
             // 이미 처리된 파일은 로컬에서 삭제
             if (existsSync(filePath)) {
               unlinkSync(filePath);
-              this.logger.log(
-                LogLevel.INFO,
-                LogSource.STREAM,
-                `Deleted processed audio file: ${file}`,
-              );
             }
             continue;
           }
@@ -449,27 +510,22 @@ export class StreamService {
             objectName,
           );
           if (isJobInQueue) {
-            this.logger.log(
-              LogLevel.INFO,
-              LogSource.STREAM,
-              `File is already in queue: ${objectName}`,
-            );
             continue;
           }
 
-          const { audioFiles: uploadedAudioFiles } =
-            await this.minioService.uploadStreamFiles(
-              channelId,
-              liveId,
-              channelDir,
-              {
-                audioFiles: [file],
-                imageFiles: [],
-              },
-            );
+          // 재시도 로직이 포함된 업로드
+          const { audioFiles: uploadedAudioFiles } = await this.uploadWithRetry(
+            channelId,
+            liveId,
+            channelDir,
+            {
+              audioFiles: [file],
+              imageFiles: [],
+            },
+          );
 
           if (uploadedAudioFiles.length === 0) {
-            throw new Error('Failed to upload audio file');
+            throw new Error('Failed to upload audio file after retries');
           }
 
           await this.saveFileToDB(channelId, liveId, filePath, FileType.AUDIO);
@@ -486,14 +542,23 @@ export class StreamService {
             this.logger.log(
               LogLevel.INFO,
               LogSource.STREAM,
-              `Deleted uploaded audio file: ${file}`,
+              `Successfully processed audio file: ${file}`,
             );
           }
         } catch (error) {
-          this.logger.error(
-            LogSource.STREAM,
-            `Error processing audio file ${file}: ${error.message}`,
-          );
+          // 에러 로그 빈도 제한 (1분에 한 번만 기록)
+          const now = Date.now();
+          const errorKey = `upload_error_${file}`;
+          if (!this.lastErrorLog || now - this.lastErrorLog > 60000) {
+            this.logger.error(
+              LogSource.STREAM,
+              `Upload failed for audio file ${file}: ${error.message}`,
+            );
+            this.lastErrorLog = now;
+          }
+        } finally {
+          // 처리 완료 후 제거
+          this.processingFiles.delete(objectName);
         }
       }
 
@@ -602,5 +667,49 @@ export class StreamService {
 
   async findByObjectName(objectName: string): Promise<File | null> {
     return this.fileRepository.findByObjectName(objectName);
+  }
+
+  private async uploadWithRetry(
+    channelId: string,
+    liveId: string,
+    channelDir: string,
+    files: { audioFiles: string[]; imageFiles: string[] },
+    retries: number = this.UPLOAD_RETRY_COUNT,
+  ): Promise<{ audioFiles: string[]; imageFiles: string[] }> {
+    // MinIO 연결 상태 확인
+    const isMinioHealthy = await this.minioService.checkHealth();
+    if (!isMinioHealthy) {
+      throw new Error('MinIO service is not available');
+    }
+
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const result = await this.minioService.uploadStreamFiles(
+          channelId,
+          liveId,
+          channelDir,
+          files,
+        );
+        return result;
+      } catch (error) {
+        if (attempt === retries) {
+          throw error;
+        }
+
+        // 재시도 전 대기 (지수 백오프)
+        const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+        await new Promise((resolve) => setTimeout(resolve, delay));
+
+        this.logger.log(
+          LogLevel.INFO,
+          LogSource.STREAM,
+          `Upload retry ${attempt}/${retries} for ${
+            files.audioFiles[0] || files.imageFiles[0]
+          }`,
+        );
+      }
+    }
+
+    throw new Error('All upload attempts failed');
   }
 }
