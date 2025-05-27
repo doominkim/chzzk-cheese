@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Controller, Get, Param, Post, Query, Version } from '@nestjs/common';
 import { ApiProperty, ApiTags } from '@nestjs/swagger';
 import { ChannelService } from '../services/channel.service';
 import { GenerateChannelDto } from '../dtos/generate-channel.dto';
@@ -10,6 +10,7 @@ import { ChannelChatLogService } from '../services/channel-chat-log.service';
 import { ChannelLiveTranscriptService } from '../services/channel-live-transcript.service';
 import { FindChannelLiveTranscriptDto } from '../dtos/find-channel-live-transcript.dto';
 import { FindChannelChatDto } from '../dtos/find-channel-chat.dto';
+import { FindChannelDtoV2 } from '../dtos/find-channel-v2.dto';
 
 @ApiTags('채널 관리')
 @Controller('channel')
@@ -26,6 +27,15 @@ export class ChannelController {
   @Get()
   async findChannels(@Query() findChannelDto: FindChannelDto) {
     return this.channelService.findChannels(findChannelDto);
+  }
+
+  @ApiProperty({
+    description: '채널 전체 조회',
+  })
+  @Get()
+  @Version('2')
+  async findChannelsV2(@Query() findChannelDto: FindChannelDtoV2) {
+    return this.channelService.findChannelsV2(findChannelDto);
   }
 
   @ApiProperty({

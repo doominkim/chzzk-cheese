@@ -82,11 +82,29 @@ export class BatchService {
       const { uuid } = channel;
       const chzzkModule = this.chzzkModules.get(uuid);
       if (!chzzkModule) {
-        const newChzzkModule = new ChzzkModule();
-        newChzzkModule.chat.join(uuid);
-        this.chzzkModules.set(uuid, newChzzkModule);
-
         try {
+          // 채널 상태 조회
+          const channelStatus = await this.chzzkService.getChannelLiveStatus(
+            uuid,
+          );
+          if (!channelStatus || !channelStatus.chatChannelId) {
+            this.logger.warn(`채널 ${uuid}의 채팅 채널을 찾을 수 없습니다.`);
+            continue;
+          }
+
+          const newChzzkModule = new ChzzkModule();
+
+          try {
+            // 채팅 조인 시도
+            await newChzzkModule.chat.join(uuid);
+            this.chzzkModules.set(uuid, newChzzkModule);
+            this.logger.debug(`채널 ${uuid} 채팅 연결 성공`);
+          } catch (joinError) {
+            this.logger.warn(`채널 ${uuid} 채팅 조인 실패:`, joinError.message);
+            continue;
+          }
+
+          // 채팅 이벤트 폴링 시작
           setInterval(() => {
             const events = newChzzkModule.chat.pollingEvent();
             this.dataSource.transaction(async (manager) => {

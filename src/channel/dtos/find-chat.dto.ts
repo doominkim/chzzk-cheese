@@ -14,17 +14,19 @@ import { ChatType } from './find-channel-chat.dto';
 export class FindChatDto {
   @ApiProperty({
     description: '채널 UUID',
-    required: true,
+    required: false,
   })
+  @IsOptional()
   @IsString()
-  uuid: string;
+  uuid?: string;
 
   @ApiProperty({
     description: '채널 채팅 채널 ID',
-    required: true,
+    required: false,
   })
+  @IsOptional()
   @IsString()
-  chatChannelId: string;
+  chatChannelId?: string;
 
   @ApiProperty({
     description: '페이지 크기',

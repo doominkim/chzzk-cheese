@@ -6,6 +6,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ChannelLive } from '../entities/channel-live.entity';
 import { ChannelLiveLog } from '../entities/channel-live-log.entity';
 import { FindChannelDto } from '../dtos/find-channel.dto';
+import { FindChannelDtoV2 } from '../dtos/find-channel-v2.dto';
+import { ChannelChatLog } from '../entities/channel-chat-log.entity';
 
 @Injectable()
 export class ChannelRepository {
@@ -186,5 +188,54 @@ export class ChannelRepository {
     GROUP BY clc.id`;
 
     return await this.repository.query(query);
+  }
+
+  async findChannelsV2(findChannelDto: FindChannelDtoV2) {
+    const {
+      channelName,
+      isChatCollected,
+      openLive,
+      uuid,
+      nickname,
+      userIdHash,
+    } = findChannelDto;
+    const query = this.repository
+      .createQueryBuilder('c')
+      .leftJoinAndMapMany(
+        'c.channelChatLogs',
+        ChannelChatLog,
+        'cll',
+        'cll.channelId = c.id',
+      );
+
+    if (channelName) {
+      query.andWhere('c.channelName ILIKE :channelName', {
+        channelName: `%${channelName}%`,
+      });
+    }
+
+    if (isChatCollected) {
+      query.andWhere('c.isChatCollected = :isChatCollected', {
+        isChatCollected,
+      });
+    }
+
+    if (openLive) {
+      query.andWhere('c.openLive = :openLive', { openLive });
+    }
+
+    if (uuid) {
+      query.andWhere('c.uuid = :uuid', { uuid });
+    }
+
+    if (nickname) {
+      query.andWhere('cll.nickname = :nickname', { nickname });
+    }
+
+    if (userIdHash) {
+      query.andWhere('cll.userIdHash = :userIdHash', { userIdHash });
+    }
+
+    return await query.getMany();
   }
 }

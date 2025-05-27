@@ -3,6 +3,7 @@ import { ChannelRepository } from '../repositories/channel.repository';
 import { GenerateChannelDto } from '../dtos/generate-channel.dto';
 import { ModifyChannelDto } from '../dtos/modify-channel.dto';
 import { FindChannelDto } from '../dtos/find-channel.dto';
+import { FindChannelDtoV2 } from '../dtos/find-channel-v2.dto';
 
 @Injectable()
 export class ChannelService {
@@ -13,6 +14,14 @@ export class ChannelService {
   async findChannels(findChannelDto?: FindChannelDto) {
     try {
       return await this.channelRepository.findChannels(findChannelDto);
+    } catch (e) {
+      this.logger.error(e);
+    }
+  }
+
+  async findChannelsV2(findChannelDto?: FindChannelDtoV2) {
+    try {
+      return await this.channelRepository.findChannelsV2(findChannelDto);
     } catch (e) {
       this.logger.error(e);
     }
