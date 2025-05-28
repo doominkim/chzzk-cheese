@@ -6,7 +6,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ChannelLive } from '../entities/channel-live.entity';
 import { ChannelLiveLog } from '../entities/channel-live-log.entity';
 import { FindChannelDto } from '../dtos/find-channel.dto';
-import { FindChannelDtoV2 } from '../dtos/find-channel-v2.dto';
+import {
+  FindChannelDtoV2,
+  ChannelSortField,
+} from '../dtos/find-channel-v2.dto';
 import { ChannelChatLog } from '../entities/channel-chat-log.entity';
 
 @Injectable()
@@ -198,6 +201,8 @@ export class ChannelRepository {
       uuid,
       nickname,
       userIdHash,
+      sortBy,
+      sortOrder,
     } = findChannelDto;
     const query = this.repository
       .createQueryBuilder('c')
@@ -234,6 +239,16 @@ export class ChannelRepository {
 
     if (userIdHash) {
       query.andWhere('cll.userIdHash = :userIdHash', { userIdHash });
+    }
+
+    if (sortBy) {
+      if (sortBy === ChannelSortField.FOLLOWER) {
+        query.orderBy('c.follower', sortOrder ? sortOrder : 'DESC');
+      } else if (sortBy === ChannelSortField.OPEN_LIVE) {
+        query.orderBy('c.openLive', sortOrder ? sortOrder : 'DESC');
+      } else if (sortBy === ChannelSortField.CHAT_CREATED_AT) {
+        query.orderBy('cll.createdAt', sortOrder ? sortOrder : 'DESC');
+      }
     }
 
     return await query.getMany();
