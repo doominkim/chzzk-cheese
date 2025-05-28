@@ -10,6 +10,7 @@ import { Channel } from '../entities/channel.entity';
 import { FindChannelChatDto } from '../dtos/find-channel-chat.dto';
 import { ChannelLive } from '../entities/channel-live.entity';
 import { FindChatDto } from '../dtos/find-chat.dto';
+import { ChannelLiveCategory } from '../entities/channel-live-category.entity';
 
 @Injectable()
 export class ChannelChatLogRepository {
@@ -241,7 +242,19 @@ export class ChannelChatLogRepository {
 
     const query = this.repository
       .createQueryBuilder('ccl')
-      .leftJoinAndMapOne('ccl.channel', Channel, 'c', 'ccl.channelId = c.id');
+      .leftJoinAndMapOne('ccl.channel', Channel, 'c', 'ccl.channelId = c.id')
+      .leftJoinAndMapOne(
+        'ccl.channelLive',
+        ChannelLive,
+        'cl',
+        'cl.chatChannelId = ccl.chatChannelId',
+      )
+      .leftJoinAndMapOne(
+        'cl.liveCategory',
+        ChannelLiveCategory,
+        'clc',
+        'clc.id = cl.liveCategoryId',
+      );
 
     if (uuid) {
       query.where('c.uuid = :uuid', { uuid });

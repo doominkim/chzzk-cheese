@@ -243,11 +243,11 @@ export class ChannelRepository {
 
     if (sortBy) {
       if (sortBy === ChannelSortField.FOLLOWER) {
-        query.orderBy('c.follower', sortOrder ? sortOrder : 'DESC');
+        query.addOrderBy('c.follower', sortOrder ? sortOrder : 'DESC');
       } else if (sortBy === ChannelSortField.OPEN_LIVE) {
-        query.orderBy('c.openLive', sortOrder ? sortOrder : 'DESC');
+        query.addOrderBy('c.openLive', sortOrder ? sortOrder : 'DESC');
       } else if (sortBy === ChannelSortField.CHAT_CREATED_AT) {
-        query.orderBy('cll.createdAt', sortOrder ? sortOrder : 'DESC');
+        query.addOrderBy('cll.createdAt', sortOrder ? sortOrder : 'DESC');
       }
     }
 
