@@ -22,7 +22,7 @@ interface HealthStatus {
 @Injectable()
 export class HealthService {
   private readonly logger = new Logger(HealthService.name);
-  private readonly collectorUrl = 'http://localhost:3001/apis';
+  private readonly collectorUrl = 'https://121.167.129.36:3001/apis';
   private readonly timeout = 5000; // 5초 타임아웃
 
   constructor(
@@ -47,13 +47,13 @@ export class HealthService {
         this.httpService.get(this.collectorUrl).pipe(timeout(this.timeout)),
       );
       const endTime = Date.now();
+      status.status = 'up'; // API 호출 성공 시 status를 up으로 설정
 
       status.services.collectors.push({
         name: 'collector',
         status: 'up',
         responseTime: `${endTime - startTime}ms`,
       });
-      status.status = 'up'; // API 호출 성공 시 status를 up으로 설정
     } catch (error) {
       this.logger.error(`Collector health check failed: ${error.message}`);
 

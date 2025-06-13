@@ -8,7 +8,6 @@ import { ExpressAdapter } from '@bull-board/express';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import * as fs from 'fs';
-import * as https from 'https';
 
 async function bootstrap() {
   // HTTPS 옵션 설정

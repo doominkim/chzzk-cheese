@@ -1,9 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ChzzkRepository } from './chzzk.repository';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
+import {
+  TokenRequestDto,
+  TokenResponseDto,
+  TokenRevokeRequestDto,
+} from './dtos/auth.dto';
 
 @Injectable()
 export class ChzzkService {
-  constructor(private chzzkRepository: ChzzkRepository) {}
+  private readonly logger = new Logger(ChzzkService.name);
+  private readonly baseUrl = 'https://chzzk.naver.com';
+
+  constructor(
+    private chzzkRepository: ChzzkRepository,
+    private readonly httpService: HttpService,
+  ) {}
 
   async getChannelsByKeyword(keyword: string) {
     return this.chzzkRepository.getChannelsByKeyword(keyword);
@@ -27,5 +40,36 @@ export class ChzzkService {
 
   async leaveChannel(channelId: string) {
     return this.chzzkRepository.leaveChannel(channelId);
+  }
+
+  async getToken(tokenRequestDto: TokenRequestDto): Promise<TokenResponseDto> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post<TokenResponseDto>(
+          `${this.baseUrl}/auth/v1/token`,
+          tokenRequestDto,
+        ),
+      );
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Token request failed: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async revokeToken(
+    tokenRevokeRequestDto: TokenRevokeRequestDto,
+  ): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.httpService.post(
+          `${this.baseUrl}/auth/v1/token/revoke`,
+          tokenRevokeRequestDto,
+        ),
+      );
+    } catch (error) {
+      this.logger.error(`Token revoke failed: ${error.message}`);
+      throw error;
+    }
   }
 }
