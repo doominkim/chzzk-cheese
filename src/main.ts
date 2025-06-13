@@ -7,10 +7,19 @@ import { BullAdapter } from '@bull-board/api/bullAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import * as fs from 'fs';
+import * as https from 'https';
 
 async function bootstrap() {
+  // HTTPS 옵션 설정
+  const httpsOptions = {
+    key: fs.readFileSync('./121.167.129.36-key.pem'),
+    cert: fs.readFileSync('./121.167.129.36.pem'),
+  };
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     cors: true,
+    httpsOptions,
   });
 
   app.enableVersioning({
@@ -60,5 +69,6 @@ async function bootstrap() {
 
   const port = process.env.IS_BATCH ? 3001 : 3000;
   await app.listen(port);
+  console.log(`Application is running on: https://localhost:${port}`);
 }
 bootstrap();
