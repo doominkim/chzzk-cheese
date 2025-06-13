@@ -12,6 +12,7 @@ import {
 export class ChzzkService {
   private readonly logger = new Logger(ChzzkService.name);
   private readonly baseUrl = 'https://chzzk.naver.com';
+  private readonly openApiUrl = 'https://openapi.chzzk.naver.com';
 
   constructor(
     private chzzkRepository: ChzzkRepository,
@@ -69,6 +70,24 @@ export class ChzzkService {
       );
     } catch (error) {
       this.logger.error(`Token revoke failed: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async getUserInfo(accessToken: string) {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${this.openApiUrl}/open/v1/users/me`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }),
+      );
+
+      console.log(response.data);
+      return response.data;
+    } catch (error) {
+      this.logger.error(`Get user info failed: ${error.message}`);
       throw error;
     }
   }

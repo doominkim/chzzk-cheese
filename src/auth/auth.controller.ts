@@ -47,7 +47,7 @@ export class AuthController {
   }
 
   @Get('me')
-  async getMe(@Query('sessionId') sessionId: string) {
+  async getChzzkMe(@Query('sessionId') sessionId: string) {
     if (!sessionId) {
       throw new Error('Unauthorized');
     }
@@ -57,6 +57,6 @@ export class AuthController {
       throw new Error('Session expired');
     }
 
-    return token;
+    return await this.chzzkService.getUserInfo(token.accessToken);
   }
 }
