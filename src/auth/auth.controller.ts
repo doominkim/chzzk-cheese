@@ -40,14 +40,23 @@ export class AuthController {
       return res.redirect('https://ping-pong.world/login/error');
     }
 
-    console.log(token);
+    const sessionId = this.authService.createSession(token);
+    return res.redirect(
+      `https://ping-pong.world/login/success?sessionId=${sessionId}`,
+    );
+  }
 
-    res.cookie('access_token', token.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // 로컬은 false
-      sameSite: 'none',
-    });
+  @Get('me')
+  async getMe(@Query('sessionId') sessionId: string) {
+    if (!sessionId) {
+      throw new Error('Unauthorized');
+    }
 
-    return res.redirect('https://ping-pong.world/login/success');
+    const token = this.authService.getSession(sessionId);
+    if (!token) {
+      throw new Error('Session expired');
+    }
+
+    return token;
   }
 }
